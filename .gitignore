@@ -1,0 +1,29 @@
+# Entornos virtuales
+.venv/
+venv/
+
+# Variables de entorno y secretos
+.env
+.envrc
+
+# Bases de datos locales
+*.db
+
+# Cachés de Python
+__pycache__/
+*.pyc
+
+# Archivos de logs y directorios temporales
+logs/
+*.log
+
+# Archivos de configuración de editor
+.vscode/
+.idea/
+
+# Otros archivos temporales o exportados
+*.csv
+*.bak
+
+.streamlit/secrets.toml
+

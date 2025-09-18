@@ -1,0 +1,43 @@
+# --- Core API ---
+fastapi==0.116.1
+starlette==0.47.2
+uvicorn==0.35.0
+# Para más rendimiento en prod, puedes usar:
+# uvicorn[standard]==0.35.0
+
+# --- Datos / ORM ---
+SQLAlchemy==2.0.41
+pydantic==2.11.7
+pydantic_core==2.33.2
+
+# --- Utilidades ---
+python-dotenv==1.1.1
+requests==2.32.4
+email_validator==2.2.0
+passlib==1.7.4
+bcrypt==4.3.0
+python-jose==3.5.0
+cryptography==45.0.5
+loguru==0.7.3
+
+# --- Excel / CSV / Data ---
+pandas==2.3.1
+openpyxl==3.1.5
+
+# --- Streamlit (RSVP + Admin Dashboard) ---
+streamlit==1.47.0
+
+# --- Programación/Jobs (recordatorios) ---
+APScheduler==3.11.0
+
+# --- Envío de correos ---
+sendgrid==6.12.4
+python-http-client==3.3.7
+
+# --- Imágenes (banderas) ---
+pillow==11.3.0
+
+# --- Opcional (validación E.164 estricta) ---
+# phonenumbers==8.13.52
+# ó más liviano:
+# phonenumberslite==8.13.52

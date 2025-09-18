@@ -1,0 +1,98 @@
+<!-- templates/emails/wedding_email_template.html -->                      <!-- Ruta del archivo de plantilla HTML -->
+
+<!DOCTYPE html>                                                             <!-- Declaración de tipo de documento HTML5 -->
+<html lang="{{html_lang}}">                                                 <!-- ✅ Idioma dinámico para accesibilidad y clientes de correo -->
+<head>                                                                       <!-- Inicio del head del documento -->
+  <meta charset="UTF-8" />                                                  <!-- Codificación UTF-8 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  <!-- Responsive en móviles -->
+  <title>Boda Daniela & Cristian</title>                                   <!-- Título del documento (no visible en todos los clientes) -->
+  <style>                                                                    <!-- Estilos inline, compatibles con la mayoría de clientes -->
+    body {                                                                   /* Reseteo y tipografía base */
+      margin: 0;                                                             /* Quita márgenes del body */
+      padding: 0;                                                            /* Quita padding del body */
+      background-color: #fdfcf9;                                             /* Fondo suave */
+      font-family: 'Helvetica Neue', Arial, sans-serif;                      /* Fuente segura */
+      color: #333;                                                           /* Color de texto principal */
+    }
+    .container {                                                             /* Contenedor principal del email */
+      max-width: 600px;                                                      /* Ancho máximo para buena lectura */
+      margin: 0 auto;                                                        /* Centrado horizontal */
+      background: #ffffff;                                                   /* Fondo blanco para contraste */
+      border-radius: 12px;                                                   /* Esquinas redondeadas */
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);                               /* Sombra ligera */
+      overflow: hidden;                                                      /* Oculta desbordes de bordes redondeados */
+    }
+    .header {                                                                /* Cabecera con imagen de fondo */
+      background: url('https://i.ibb.co/1L9m0fM/flowers-header.jpg') center/cover no-repeat; /* Imagen decorativa */
+      padding: 40px;                                                         /* Espaciado generoso */
+      text-align: center;                                                    /* Centra contenido */
+      color: #fff;                                                           /* Texto claro sobre fondo oscuro */
+    }
+    .header h1 {                                                             /* Título principal de la cabecera */
+      margin: 0;                                                             /* Sin márgenes extra */
+      font-size: 28px;                                                       /* Tamaño visible */
+      font-weight: bold;                                                     /* Peso fuerte */
+      letter-spacing: 1px;                                                   /* Espaciado sutil entre letras */
+    }
+    .content {                                                               /* Área central del contenido */
+      padding: 30px;                                                         /* Espaciado interno */
+      text-align: center;                                                    /* Centra textos/elementos */
+    }
+    .content h2 {                                                            /* Título dinámico ({{title}}) */
+      color: #b48a50;                                                        /* Dorado suave */
+      font-size: 24px;                                                       /* Tamaño intermedio */
+      margin-bottom: 12px;                                                   /* Separación del siguiente párrafo */
+    }
+    .content p {                                                             /* Párrafos del contenido */
+      font-size: 16px;                                                       /* Legible en móvil/escritorio */
+      line-height: 1.5;                                                      /* Altura de línea cómoda */
+      margin: 10px 0;                                                        /* Margen vertical */
+    }
+    .cta {                                                                   /* Estilo del botón principal */
+      display: inline-block;                                                 /* Comportamiento tipo botón */
+      margin-top: 20px;                                                      /* Separación desde texto anterior */
+      padding: 12px 24px;                                                    /* Área clicable confortable */
+      background-color: #b48a50;                                             /* Color de marca */
+      color: #fff !important;                                                /* Texto blanco (forzado) */
+      text-decoration: none;                                                 /* Sin subrayado */
+      font-weight: bold;                                                     /* Peso del texto del botón */
+      border-radius: 8px;                                                    /* Esquinas redondeadas */
+    }
+    .footer {                                                                /* Pie de página */
+      font-size: 12px;                                                       /* Tamaño pequeño */
+      color: #888;                                                           /* Gris suave */
+      padding: 20px;                                                         /* Espaciado interno */
+      text-align: center;                                                    /* Centrado de texto */
+    }
+  </style>                                                                   <!-- Fin de estilos inline -->
+</head>                                                                      <!-- Fin del head -->
+<body>                                                                        <!-- Inicio del body -->
+  <div class="container">                                                    <!-- Contenedor principal -->
+    <!-- Encabezado con imagen -->
+    <div class="header">                                                     <!-- Sección de cabecera -->
+      <h1>Daniela & Cristian</h1>                                           <!-- Título fijo de la pareja -->
+    </div>                                                                   <!-- Fin cabecera -->
+
+    <!-- Contenido dinámico -->
+    <div class="content">                                                    <!-- Sección de contenido central -->
+      <h2>{{title}}</h2>                                                     <!-- Placeholder para el título traducido -->
+      <p>{{message}}</p>                                                     <!-- Placeholder para el cuerpo traducido -->
+
+      <!-- Botón Call To Action -->
+      <a href="{{cta_url}}"                                                  <!-- Enlace/CTA con URL dinámica -->
+         class="cta"                                                         <!-- Clase para estilos de botón -->
+         target="_blank"                                                     <!-- ✅ Abre en nueva pestaña (mejor UX en correos) -->
+         rel="noopener noreferrer"                                           <!-- ✅ Seguridad: evita acceso a window.opener -->
+         aria-label="{{cta_label}}">                                         <!-- ✅ Accesibilidad: nombre del control para lectores -->
+        {{cta_label}}                                                        <!-- Texto visible del botón -->
+      </a>                                                                   <!-- Fin del botón CTA -->
+    </div>                                                                   <!-- Fin de contenido -->
+
+    <!-- Pie de página -->
+    <div class="footer">                                                     <!-- Sección de pie -->
+      <p>{{footer_text}}</p>                                                <!-- ✅ Texto de pie dinámico por idioma -->
+      <p>&copy; 2025 Daniela & Cristian</p>                                 <!-- Derechos de autor -->
+    </div>                                                                   <!-- Fin de pie -->
+  </div>                                                                     <!-- Fin contenedor -->
+</body>                                                                       <!-- Fin del body -->
+</html>                                                                        <!-- Fin del documento HTML -->
