@@ -27,3 +27,9 @@ logs/
 
 .streamlit/secrets.toml
 
+# Nunca subas estos:
+keys/
+subir_git_embebido.sh
+.ssh/
+*.pem
+*.key

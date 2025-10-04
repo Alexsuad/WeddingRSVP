@@ -1,81 +1,65 @@
-# app/db.py
+# app/db.py                                                                                   # Indica la ruta y nombre del archivo (informativo para el lector).
 
-# =================================================================================
-# 🗄️ CONFIGURACIÓN Y CONEXIÓN A LA BASE DE DATOS
-# ---------------------------------------------------------------------------------
-# Este módulo centraliza la configuración de la conexión a la base de datos
-# utilizando SQLAlchemy.
-#
-# Se implementa una lógica para asegurar que todas las partes de la aplicación
-# (FastAPI, Streamlit, scripts) apunten a un único archivo de base de datos
-# utilizando una ruta absoluta, evitando la creación de bases de datos duplicadas.
-# =================================================================================
+# =================================================================================            # Separador visual de sección.
+# 🗄️ CONFIGURACIÓN Y CONEXIÓN A LA BASE DE DATOS                                              # Título explicativo de la sección.
+# ---------------------------------------------------------------------------------            # Línea de separación.
+# Este módulo centraliza la configuración de la conexión a la base de datos                    # Explica el propósito del módulo.
+# utilizando SQLAlchemy.                                                                       # Continúa la explicación.
+#                                                                                              # Línea en blanco intencional.
+# Se implementa una lógica para asegurar que todas las partes de la aplicación                 # Describe la lógica de ruta absoluta.
+# (FastAPI, Streamlit, scripts) apunten a un único archivo de base de datos                    # Aclara qué componentes se benefician.
+# utilizando una ruta absoluta, evitando la creación de bases de datos duplicadas.             # Beneficio de la ruta absoluta.
+# =================================================================================            # Fin del encabezado.
 
+# 🐍 Importaciones de Módulos                                                                  # Título de sección de imports.
+# ---------------------------------------------------------------------------------            # Separador de sección.
+import os                                                                                      # `os`: para leer variables de entorno y construir rutas absolutas.
+from sqlalchemy import create_engine                                                           # `create_engine`: crea el motor de conexión a la BD.
+from sqlalchemy.orm import sessionmaker, declarative_base                                      # `sessionmaker`: fabrica sesiones; `declarative_base`: base ORM.
+from loguru import logger                                                                      # ✅ Importa logger para escribir trazas (añadido para loguear la BD).
 
-# 🐍 Importaciones de Módulos
-# ---------------------------------------------------------------------------------
-# `os`: Para interactuar con el sistema operativo, específicamente para construir
-#      rutas de archivos de manera robusta.
-import os
-# `create_engine`: La función de SQLAlchemy para establecer la conexión con la BD.
-from sqlalchemy import create_engine
-# `sessionmaker`: Para crear "fábricas" de sesiones que gestionan las conversaciones
-#                 con la base de datos.
-# `declarative_base`: Para crear la clase Base de la que heredarán todos nuestros
-#                     modelos ORM.
-from sqlalchemy.orm import sessionmaker, declarative_base
+# 📍 LÓGICA DE RUTA ABSOLUTA PARA LA BASE DE DATOS                                             # Título de sección de configuración de URL.
+# ---------------------------------------------------------------------------------            # Separador de sección.
+DATABASE_URL_ENV = os.getenv("DATABASE_URL")                                                   # Lee la URL de BD desde variables de entorno (si existe).
 
+if DATABASE_URL_ENV:                                                                           # Si la variable de entorno está definida...
+    DATABASE_URL = DATABASE_URL_ENV                                                            # ...úsala directamente como cadena de conexión.
+else:                                                                                          # De lo contrario (no hay env)...
+    current_dir = os.path.dirname(os.path.abspath(__file__))                                   # 1) Obtiene la ruta absoluta del directorio de este archivo.
+    project_root = os.path.abspath(os.path.join(current_dir, ".."))                            # 2) Sube un nivel para llegar a la raíz del proyecto.
+    db_path = os.path.join(project_root, "wedding.db")                                         # 3) Construye la ruta absoluta del archivo SQLite `wedding.db`.
+    DATABASE_URL = f"sqlite:///{db_path}"                                                      # 4) Formatea la URL SQLAlchemy para ruta absoluta en SQLite.
 
-# 📍 LÓGICA DE RUTA ABSOLUTA PARA LA BASE DE DATOS
-# ---------------------------------------------------------------------------------
-# Esta sección garantiza que siempre se use el mismo archivo `wedding.db`.
+# 🏭 CREACIÓN DEL MOTOR Y LA FÁBRICA DE SESIONES                                               # Título de sección de engine y sesión.
+# ---------------------------------------------------------------------------------            # Separador de sección.
+engine = create_engine(                                                                        # Crea el motor de SQLAlchemy contra la URL resuelta.
+    DATABASE_URL,                                                                              # Pasa la URL de la base de datos (absoluta o de entorno).
+    connect_args={"check_same_thread": False}                                                  # Para SQLite: permite acceso multi-hilo (requerido por FastAPI).
+)                                                                                              # Cierra la creación del engine.
 
-# Se intenta leer la URL de la base de datos desde una variable de entorno.
-# Esto da flexibilidad para configurar una base de datos diferente (como PostgreSQL) en producción.
-DATABASE_URL_ENV = os.getenv("DATABASE_URL")
+SessionLocal = sessionmaker(                                                                   # Crea la fábrica de sesiones asociada al engine.
+    autocommit=False,                                                                          # Desactiva autocommit: control manual de commits.
+    autoflush=False,                                                                           # Desactiva autoflush: evita flush implícitos inesperados.
+    bind=engine                                                                                # Asocia la sesión al engine configurado.
+)                                                                                              # Cierra la creación de la fábrica de sesiones.
 
-# Si se encuentra una URL en las variables de entorno, se utiliza esa.
-if DATABASE_URL_ENV:
-    DATABASE_URL = DATABASE_URL_ENV
-else:
-    # Si no se encuentra, se construye una ruta absoluta al archivo `wedding.db`
-    # que debe estar en la carpeta raíz del proyecto.
-    
-    # 1. Se obtiene la ruta del directorio donde se encuentra este archivo (`app/`).
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # 2. Se sube un nivel para llegar a la raíz del proyecto (`backend_starter/`).
-    project_root = os.path.abspath(os.path.join(current_dir, ".."))
-    # 3. Se construye la ruta completa al archivo de la base de datos.
-    db_path = os.path.join(project_root, "wedding.db")
-    # 4. Se formatea la ruta en el formato de URL de conexión que SQLAlchemy espera para SQLite.
-    #    `sqlite:///` indica una ruta de archivo absoluta.
-    DATABASE_URL = f"sqlite:///{db_path}"
+Base = declarative_base()                                                                       # Crea la clase base del ORM para modelos (mapear tablas).
 
+def get_db():                                                                                  # Define una dependencia para inyectar sesiones por petición.
+    db = SessionLocal()                                                                         # Crea una nueva sesión ligada al engine.
+    try:                                                                                        # Bloque try/finally para asegurar el cierre de la sesión.
+        yield db                                                                                # Entrega la sesión al código que la consuma (endpoint/servicio).
+    finally:                                                                                    # Al finalizar el uso de la sesión...
+        db.close()                                                                              # ...cierra la sesión liberando recursos/conexiones.
 
-# 🏭 CREACIÓN DEL MOTOR Y LA FÁBRICA DE SESIONES
-# ---------------------------------------------------------------------------------
-
-# Se crea el "motor" de SQLAlchemy, que es el punto de entrada a la base de datos.
-# `connect_args={"check_same_thread": False}`: Es una configuración específica para
-# SQLite que permite que sea utilizado por múltiples hilos, algo necesario para FastAPI.
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-
-# Se crea una "fábrica" de sesiones (`SessionLocal`). Cada vez que necesitemos hablar
-# con la base de datos, pediremos una nueva sesión a esta fábrica.
-# `autocommit=False`, `autoflush=False`: Asegura que tengamos control manual sobre
-# cuándo se guardan los cambios.
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Se crea la clase `Base`. Todos nuestros modelos (como `Guest` y `Task`)
-# heredarán de esta clase, permitiendo que SQLAlchemy los descubra y los mapee
-# a tablas en la base de datos.
-Base = declarative_base()
-
-
-
-def get_db():                              # Define una dependencia para inyectar sesiones de BD por petición.
-    db = SessionLocal()                    # Crea una nueva sesión ligada al engine configurado.
-    try:                                   # Abre un bloque try para garantizar cierre correcto.
-        yield db                           # Entrega la sesión al endpoint que la consuma.
-    finally:                               # Al finalizar la petición...
-        db.close()                         # Cierra la sesión para liberar conexiones/recursos.
+# =================================================================================            # Separador de nueva sección añadida.
+# 🔎 UTILIDAD: LOGUEAR LA RUTA REAL DE LA BASE DE DATOS EN STARTUP                             # Título claro de la utilidad de diagnóstico.
+# ---------------------------------------------------------------------------------            # Separador de sección.
+def log_db_path_on_startup() -> None:                                                          # Define una función que imprime la BD en uso al arrancar.
+    try:                                                                                       # Protege el log para no impedir el arranque por errores.
+        url = engine.url                                                                        # Obtiene el objeto URL del engine (describe la conexión actual).
+        db_file = getattr(url, "database", None)                                                # Extrae la ruta del archivo físico (solo aplica a SQLite).
+        abs_path = os.path.abspath(db_file) if db_file else "<memory/other>"                    # Resuelve a ruta absoluta (o marca si no hay archivo).
+        logger.info("DB in use → {} (abs={})", db_file, abs_path)                               # Escribe en logs la ruta cruda y la absoluta (diagnóstico).
+    except Exception as e:                                                                      # Si ocurre cualquier excepción durante el proceso...
+        logger.warning("No pude resolver la ruta de la BD: {}", e)                              # ...lo reporta como warning sin romper el servicio.

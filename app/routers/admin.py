@@ -7,30 +7,19 @@
 # - Devuelve resumen: created / updated / skipped / errors
 # =============================================================================
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from typing import List, Optional
-import re
+from fastapi import APIRouter, Depends                           # Importa router y dependencias de FastAPI.
+from sqlalchemy.orm import Session                                # Importa el tipo de sesión de SQLAlchemy.
+from typing import List, Optional                                  # Tipos para anotaciones.
+import re                                                          # Regex para normalizar teléfonos.
 
-# ⬇️ OJO: estos schemas están en app/schemas.py (no en un submódulo)
-from app.schemas import ImportGuestsPayload, ImportGuestsResult
-from app.core.security import require_admin       # Dep. que valida x-api-key == ADMIN_API_KEY
-from app.db import get_db                         # Session por request
+import app.schemas as schemas                                      # 🔁 Import robusto del módulo completo de schemas.
+from app.core.security import require_admin                        # Dep. que valida x-api-key == ADMIN_API_KEY.
+from app.db import get_db                                          # Proveedor de Session por request.
 
-# Modelos/CRUD del dominio (ajusta import caminos si difieren en tu proyecto)
-from app.models import Guest                      # ORM de invitado
-from app.crud import guests_crud                  # CRUD con helpers get_by_email/phone/create/commit
+from app.models import Guest                                       # ORM del invitado.
+from app.crud import guests_crud                                   # CRUD con helpers get_by_email/phone/create/commit.
 
-
-# ⚠️ IMPORTANTE:
-# - Este router ya tiene prefix="/api/admin".
-# - En app/main.py, al incluirlo, NO vuelvas a poner el mismo prefix o te quedará duplicado:
-#       app.include_router(admin.router)   # ✅
-#       app.include_router(admin.router, prefix="/api/admin")  # ❌ NO repetir
-
-
-router = APIRouter(prefix="/api/admin", tags=["admin"])
-
+router = APIRouter(prefix="/api/admin", tags=["admin"])            # Define el router con prefijo /api/admin.
 
 # ------------------------------ Helpers locales -------------------------------
 
@@ -48,15 +37,15 @@ def _normalize_phone(phone: Optional[str]) -> Optional[str]:
     digits = re.sub(r"[^\d+]", "", phone.strip())
     return digits or None
 
-
 # --------------------------------- Endpoint -----------------------------------
 
 @router.post(
-    "/import-guests",
-    response_model=ImportGuestsResult,
-    dependencies=[Depends(require_admin)],   # protege con API Key de admin
+    "/import-guests",                                              # Ruta del endpoint.
+    response_model=schemas.ImportGuestsResult,                     # 🔁 Respuesta tipada del módulo schemas.
+    dependencies=[Depends(require_admin)],                         # Protege con API Key de admin.
 )
-def import_guests(payload: ImportGuestsPayload, db: Session = Depends(get_db)):
+def import_guests(payload: schemas.ImportGuestsPayload,            # 🔁 Request tipado del módulo schemas.
+                  db: Session = Depends(get_db)):                  # Inyección de sesión de BD.
     """
     Importación en lote con upsert por email/phone (si existen).
     - Para cada ítem:
@@ -65,59 +54,49 @@ def import_guests(payload: ImportGuestsPayload, db: Session = Depends(get_db)):
         3) Si no existe → crea nuevo Guest.
     - Nunca aborta el lote por un error de fila: acumula en `errors`.
     """
-    created = 0
-    updated = 0
-    skipped = 0
-    errors: List[str] = []
+    created = 0                                                    # Contador de creados.
+    updated = 0                                                    # Contador de actualizados.
+    skipped = 0                                                    # Contador de filas saltadas por error.
+    errors: List[str] = []                                         # Lista de errores por fila.
 
-    for idx, item in enumerate(payload.items, start=1):
+    for idx, item in enumerate(payload.items, start=1):            # Itera sobre cada invitado del payload.
         try:
-            # Normaliza email/phone (aunque Pydantic ya validó formatos, aquí igualamos criterios de búsqueda)
-            norm_email = _normalize_email(item.email)
-            norm_phone = _normalize_phone(item.phone)
+            norm_email = _normalize_email(item.email)              # Normaliza email.
+            norm_phone = _normalize_phone(item.phone)              # Normaliza teléfono.
 
-            # 1) Buscar existente por email, luego por phone (si no se encontró por email)
-            existing: Optional[Guest] = None
-            if norm_email:
-                existing = guests_crud.get_by_email(db, norm_email)
-            if not existing and norm_phone:
-                existing = guests_crud.get_by_phone(db, norm_phone)
+            existing: Optional[Guest] = None                       # Inicializa variable de existente.
+            if norm_email:                                         # Si hay email normalizado...
+                existing = guests_crud.get_by_email(db, norm_email)# ...busca por email.
+            if not existing and norm_phone:                        # Si no encontró y hay teléfono...
+                existing = guests_crud.get_by_phone(db, norm_phone)# ...busca por teléfono.
 
-            if existing:
-                # 2) UPDATE (upsert): actualiza campos principales SIEMPRE;
-                #    opcionales solo si vienen no-None, para no pisar datos con None involuntario.
-                existing.full_name = item.full_name
-                existing.language = item.language
-                existing.max_accomp = item.max_accomp
-                existing.invite_type = item.invite_type
-
-                if item.side is not None:
+            if existing:                                           # Si existe registro...
+                existing.full_name = item.full_name                # Actualiza nombre.
+                existing.language = item.language                  # Actualiza idioma.
+                existing.max_accomp = item.max_accomp              # Actualiza máximo acompañantes.
+                existing.invite_type = item.invite_type            # Actualiza tipo de invitación.
+                if item.side is not None:                          # Actualiza side si vino.
                     existing.side = item.side
-                if item.relationship is not None:
+                if item.relationship is not None:                  # Actualiza relación si vino.
                     existing.relationship = item.relationship
-                if item.group_id is not None:
+                if item.group_id is not None:                      # Actualiza group_id si vino.
                     existing.group_id = item.group_id
-
-                # Email/phone: solo actualiza si vienen (y normalizados)
-                if norm_email:
+                if norm_email:                                     # Actualiza email si vino.
                     existing.email = norm_email
-                if norm_phone:
+                if norm_phone:                                     # Actualiza teléfono si vino.
                     existing.phone = norm_phone
 
-                # Commit usando tu CRUD; si tu CRUD no tiene commit(obj), usamos fallback
                 try:
-                    guests_crud.commit(db, existing)   # tu helper (si existe)
+                    guests_crud.commit(db, existing)               # Usa tu helper commit si existe.
                 except AttributeError:
-                    db.add(existing)
-                    db.commit()
-                    db.refresh(existing)
+                    db.add(existing)                               # Fallback: añade a la sesión.
+                    db.commit()                                    # Confirma cambios.
+                    db.refresh(existing)                           # Refresca desde DB.
 
-                updated += 1
+                updated += 1                                       # Incrementa contador de updates.
 
-            else:
-                # 3) CREATE (upsert)
-                # Si tu `guests_crud.create` espera un diccionario o un schema, ajusta aquí.
-                obj = guests_crud.create(
+            else:                                                  # Si no existe, crea nuevo registro...
+                _ = guests_crud.create(                            # Usa tu helper create para persistir.
                     db,
                     full_name=item.full_name,
                     email=norm_email,
@@ -129,19 +108,16 @@ def import_guests(payload: ImportGuestsPayload, db: Session = Depends(get_db)):
                     relationship=item.relationship,
                     group_id=item.group_id,
                 )
-                # Si tu CRUD no hace commit interno, asegura persistencia:
                 try:
-                    db.flush()   # opcional: asegura INSERT antes de contar
+                    db.flush()                                     # Asegura INSERT antes de contar (opcional).
                 except Exception:
                     pass
+                created += 1                                       # Incrementa contador de creaciones.
 
-                created += 1
+        except Exception as e:                                     # Si algo falla en esta fila...
+            skipped += 1                                           # Cuenta como saltada.
+            errors.append(f"Row {idx}: {e}")                       # Guarda el error legible.
 
-        except Exception as e:
-            # Nunca abortamos el lote: registramos el error y continuamos
-            skipped += 1
-            errors.append(f"Row {idx}: {e}")
-
-    # No hacemos db.commit() final a propósito: asumimos que CRUD maneja commit por fila
-    # (si quieres un commit por lote, podríamos envolver el for en un bloque de transacción).
-    return ImportGuestsResult(created=created, updated=updated, skipped=skipped, errors=errors)
+    return schemas.ImportGuestsResult(                             # Devuelve resumen del lote.
+        created=created, updated=updated, skipped=skipped, errors=errors
+    )

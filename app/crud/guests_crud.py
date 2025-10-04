@@ -20,6 +20,31 @@ from app.models import Guest        # Importa el modelo ORM de invitados (tabla 
 import unicodedata                  # Para eliminar acentos/diacríticos de los nombres.
 
 # ---------------------------------------------------------------------------------
+# 🛡️ Helpers de Seguridad y Normalización Internos
+# ---------------------------------------------------------------------------------
+
+def _mask_email(email: Optional[str]) -> str:
+    """Enmascara un email para no exponer PII en logs. 'test@example.com' -> 'te**@example.com'.""" # Docstring del helper de enmascaramiento.
+    if not email: return "<empty>"                                     # Si no hay email, devuelve un placeholder.
+    if "@" not in email: return f"{email[:2]}***"                      # Si no tiene '@', enmascara parcialmente el final.
+    user, domain = email.split("@", 1)                                 # Divide el email en usuario y dominio.
+    return f"{user[:2]}{'*' * (len(user) - 2)}@{domain}"               # Enmascara parte del usuario y mantiene el dominio.
+
+def _norm_name(s: str) -> str:
+    """Normaliza nombre: quita acentos, colapsa espacios y aplica casefold."""  # Docstring del helper de normalización de nombre.
+    txt = (s or "").strip()                                     # Limpia espacios extremos o usa "" si es None.
+    txt = unicodedata.normalize("NFKD", txt)                    # Normaliza a NFKD para separar diacríticos.
+    txt = "".join(ch for ch in txt if not unicodedata.combining(ch))  # Elimina los diacríticos (acentos).
+    txt = re.sub(r"\s+", " ", txt)                              # Colapsa espacios múltiples a uno.
+    return txt.casefold()                                       # Aplica casefold (mejor que lower para i18n).
+
+def _name_matches_flexibly(input_name_norm: str, db_name_norm: str) -> bool:
+    """Fortalecido: Devuelve True si TODAS las palabras del input están en el nombre de la BD.""" # Docstring del helper de coincidencia de nombre.
+    input_tokens = set(input_name_norm.split())                 # Divide el nombre de entrada en un conjunto de palabras (tokens).
+    db_tokens = set(db_name_norm.split())                       # Divide el nombre de la BD en un conjunto de palabras.
+    return input_tokens.issubset(db_tokens)                     # Devuelve True solo si el conjunto de entrada es un subconjunto del de la BD.
+
+# ---------------------------------------------------------------------------------
 # 🔎 Helpers de búsqueda
 # ---------------------------------------------------------------------------------
 
@@ -45,14 +70,6 @@ def get_by_phone(db: Session, phone: str) -> Optional[Guest]:
         .first()                                               # Devuelve el primer match o None.
     )                                                          # Cierra la expresión de retorno.
 
-def _norm_name(s: str) -> str:
-    """Normaliza nombre: quita acentos, colapsa espacios y aplica casefold."""  # Docstring del helper.
-    txt = (s or "").strip()                                     # Limpia espacios extremos o usa "" si es None.
-    txt = unicodedata.normalize("NFKD", txt)                    # Normaliza a NFKD para separar diacríticos.
-    txt = "".join(ch for ch in txt if not unicodedata.combining(ch))  # Elimina los diacríticos (acentos).
-    txt = re.sub(r"\s+", " ", txt)                              # Colapsa espacios múltiples a uno.
-    return txt.casefold()                                       # Aplica casefold (mejor que lower para i18n).
-
 def get_by_guest_code(db: Session, code: str) -> Optional[Guest]:
     """Devuelve invitado por su guest_code exacto, o None si no existe."""  # Docstring de la función.
     if not code:                                               # Verifica si no se proporcionó guest_code.
@@ -68,71 +85,74 @@ def get_by_guest_code(db: Session, code: str) -> Optional[Guest]:
 # ---------------------------------------------------------------------------------
 
 def _only_digits(s: str) -> str:
-    """Devuelve solo los dígitos contenidos en la cadena (ignora cualquier otro carácter)."""  # Docstring del helper.
-    return "".join(ch for ch in (s or "") if ch.isdigit())  # Recorre la cadena y concatena únicamente los dígitos.
+    """Devuelve solo los dígitos contenidos en la cadena (ignora cualquier otro carácter)."""
+    return "".join(ch for ch in (s or "") if ch.isdigit())
 
 def find_guest_for_magic(db: Session, full_name: str, phone_last4: str, email: str) -> Optional[Guest]:
-    """Localiza un invitado para Magic Link con búsqueda robusta por last4, nombre sin acentos y email opcional."""
-    full_name_norm = _norm_name(full_name)                                   # Normaliza el nombre (sin acentos, casefold, espacios colapsados).
-    email_norm = (email or "").strip().lower() or None                      # Normaliza el email a minúsculas; si viene vacío, deja None.
-    last4 = _only_digits(phone_last4)[-4:]                                   # Extrae los últimos 4 dígitos reales del parámetro.
-    if len(last4) != 4:                                                      # Si no hay 4 dígitos válidos…
-        logger.debug("CRUD/find_guest_for_magic → last4 inválido: {}", last4) # …loguea y aborta.
-        return None                                                          # Devuelve None.
+    """
+    Localiza un invitado por últimos 4 del teléfono + nombre (flex).
+    ⚠️ Opción 1 (MVP): el email NO bloquea el match. Si difiere, se registra en logs.
+    """
+    full_name_norm = _norm_name(full_name)                      # Normaliza el nombre (sin acentos, casefold).
+    email_norm = (email or "").strip().lower() or None          # Email del payload normalizado o None si vacío.
+    last4 = _only_digits(phone_last4)[-4:]                      # Toma los últimos 4 dígitos reales.
 
-    logger.debug(                                                            # Log de criterios de búsqueda ya normalizados.
-        "CRUD/find_guest_for_magic → criterios | name_norm='{}' | last4='{}' | email_norm='{}'",
-        full_name_norm, last4, email_norm
-    )                                                                        # Cierra el log.
+    if len(last4) != 4:                                         # Validación básica de last4.
+        logger.debug("CRUD/find_guest_for_magic → last4 inválido: {}", last4)
+        return None
 
-    # 🔧 Normalización del teléfono *en SQL* (quita espacios, guiones, puntos, paréntesis y '+').
-    phone_clean = Guest.phone                                                # Toma la columna original.
-    phone_clean = func.replace(phone_clean, " ", "")                         # Quita espacios.
-    phone_clean = func.replace(phone_clean, "-", "")                         # Quita guiones.
-    phone_clean = func.replace(phone_clean, ".", "")                         # Quita puntos.
-    phone_clean = func.replace(phone_clean, "(", "")                         # Quita '('.
-    phone_clean = func.replace(phone_clean, ")", "")                         # Quita ')'.
-    phone_clean = func.replace(phone_clean, "+", "")                         # Quita '+'.
+    # --- Normalización del teléfono en SQL para comparar por últimos 4 sin símbolos ---
+    phone_clean = Guest.phone
+    phone_clean = func.replace(phone_clean, " ", "")
+    phone_clean = func.replace(phone_clean, "-", "")
+    phone_clean = func.replace(phone_clean, ".", "")
+    phone_clean = func.replace(phone_clean, "(", "")
+    phone_clean = func.replace(phone_clean, ")", "")
+    phone_clean = func.replace(phone_clean, "+", "")
 
-    # ✅ Búsqueda explícita por últimos 4 dígitos (compatible con SQLite y PostgreSQL/MySQL)
-    _dialect_bind = getattr(db, "bind", None)                                   # Obtiene el engine/bind actual de la sesión (puede ser None).
-    _dialect_name = getattr(getattr(_dialect_bind, "dialect", None), "name", "")# Extrae el nombre del dialecto ('sqlite', 'postgresql', 'mysql', etc.).
-    if _dialect_name == "sqlite":                                               # Si la BD es SQLite...
-        last4_expr = func.substr(phone_clean, -4)                                # ...SQLite permite substr con índice negativo (últimos 4).
-    else:                                                                        # En otros motores (PostgreSQL/MySQL)...
-        last4_expr = func.right(phone_clean, 4)                                  # ...usamos RIGHT(col, 4) que compila correctamente.
+    # --- Expresión “últimos 4” por motor (SQLite usa substr con índice negativo) ---
+    _dialect_bind = getattr(db, "bind", None)
+    _dialect_name = getattr(getattr(_dialect_bind, "dialect", None), "name", "")
+    if _dialect_name == "sqlite":
+        last4_expr = func.substr(phone_clean, -4)
+    else:
+        last4_expr = func.right(phone_clean, 4)
 
-    q = db.query(Guest).filter(last4_expr == last4)                              # Aplica el filtro por últimos 4 con la expresión adecuada.
+    # --- Obtener candidatos por últimos 4 del teléfono ---
+    q = db.query(Guest).filter(last4_expr == last4)
+    candidates = q.all()
+    logger.debug("CRUD/find_guest_for_magic → candidatos_por_last4={}", len(candidates))
 
-    candidates = q.all()                                                     # Ejecuta y trae candidatos.
-    logger.debug("CRUD/find_guest_for_magic → candidatos_por_last4={}", len(candidates))  # Loguea cuántos hay.
+    # --- Evaluar cada candidato ---
+    for g in candidates:
+        g_name_norm = _norm_name(getattr(g, "full_name", ""))              # Nombre normalizado en BD.
+        g_email_norm = (getattr(g, "email", "") or "").strip().lower()     # Email en BD (puede ser vacío) normalizado.
 
-    for g in candidates:                                                     # Recorre cada candidato potencial.
-        g_name_norm = _norm_name(getattr(g, "full_name", ""))                # Normaliza el nombre guardado en la BD.
-        g_email_norm = (getattr(g, "email", "") or "").strip().lower()       # Normaliza el email guardado.
+        # ---------------------------------------------------------------
+        # ✅ REGLA FINAL (Opción 1 / MVP): NO bloquear por email.
+        #    - Decisión de match = últimos 4 (ya filtrado) + nombre (flex).
+        #    - El email solo se usa para telemetría (warning si difiere).
+        # ---------------------------------------------------------------
+        name_ok = _name_matches_flexibly(full_name_norm, g_name_norm)      # Todas las palabras del input deben estar en BD.
 
-        # 🔍 Reglas de match:
-        # - Nombre: flexible (contiene en cualquier sentido) para tolerar variaciones: "Ana García" ↔ "Ana García López".
-        # - Email: si se envió en el payload, debe coincidir; si no se envió, no bloquea.
-        name_ok = (full_name_norm in g_name_norm) or (g_name_norm in full_name_norm)  # Coincidencia flexible de nombre.
-        email_ok = (not email_norm) or (g_email_norm == email_norm)          # Email coincide o no se exige.
+        if email_norm and g_email_norm and g_email_norm != email_norm:     # Solo aviso si ambos tienen email y difieren.
+            logger.warning(
+                "CRUD/find_guest_for_magic → email distinto | g_id={} | db_email='{}' | in_email='{}'",
+                getattr(g, "id", None), _mask_email(g_email_norm), _mask_email(email_norm)
+            )
 
-        logger.debug(                                                         # Log de evaluación de cada candidato.
-            "CRUD/find_guest_for_magic → eval | g_id={} | g_name_norm='{}' | name_ok={} | email_ok={}",
-            getattr(g, "id", None), g_name_norm, name_ok, email_ok
-        )                                                                     # Cierra el log.
+        logger.debug(                                                      # Telemetría compacta (ya no hay email_ok).
+            "CRUD/find_guest_for_magic → eval | g_id={} | name_ok={}",
+            getattr(g, "id", None), name_ok
+        )
 
-        if name_ok and email_ok:                                              # Si cumple las reglas…
-            if email_norm and g_email_norm != email_norm:                     # Si coincide por nombre/last4 pero el email difiere…
-                logger.warning(                                               # …lo registramos como advertencia (telemetría útil).
-                    "CRUD/find_guest_for_magic → MATCH con email distinto | g_id={} | db_email='{}' | in_email='{}'",
-                    getattr(g, "id", None), g_email_norm, email_norm
-                )                                                             # Cierra el log de warning.
-            logger.debug("CRUD/find_guest_for_magic → MATCH | g_id={}", getattr(g, "id", None))  # Log de acierto final.
-            return g                                                          # Devuelve el invitado.
+        if name_ok:                                                        # Con últimos 4 + nombre OK → MATCH.
+            logger.info("CRUD/find_guest_for_magic → MATCH | g_id={}", getattr(g, "id", None))
+            return g
 
-    logger.debug("CRUD/find_guest_for_magic → SIN MATCH")                     # Si no hubo coincidencias…
-    return None                                                               # …devuelve None.
+    # Si ningún candidato cumplió nombre con esos last4, no hay match.
+    logger.debug("CRUD/find_guest_for_magic → SIN MATCH")
+    return None
 
 # ---------------------------------------------------------------------------------
 # 🆕 Crear invitado con guest_code único

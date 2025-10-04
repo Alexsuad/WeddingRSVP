@@ -1,279 +1,335 @@
-# pages/1_Formulario_RSVP.py  # Ruta del archivo dentro del proyecto.                                              # Comentario: indica ubicación.
+# pages/1_Formulario_RSVP.py
+# ===========================================================================================
+# 💍 Formulario RSVP — Refactor UX + i18n + estado (revisado)
+# ===========================================================================================
 
-# =================================================================================                                                                       # Separador visual.
-# 📝 Página de Formulario RSVP (Invitados)                                                                                                                # Título descriptivo.
-# ---------------------------------------------------------------------------------                                                                        # Separador.
-# - Requiere token de sesión válido.                                                                                                                       # Requisito de auth.
-# - Carga datos del invitado y metadatos desde el backend.                                                                                                 # Carga inicial.
-# - Permite confirmar/rechazar, registrar acompañantes y confirmar datos de contacto.                                                                      # Funcionalidad.
-# - Añade un campo de notas opcional y lo envía al backend (notes).                                                                                        # Novedad 7.2.
-# - Envía la respuesta al backend y redirige a la página de confirmación.                                                                                  # Flujo final.
-# =================================================================================                                                                       # Fin encabezado.
+import os, sys, re, requests, streamlit as st
+from dotenv import load_dotenv
+from typing import List
 
-# --- Bootstrap imports path (para que 'utils' funcione en Streamlit) ----------------------------------------------                                      # Comentario sección.
-import os                                                                                                           # Importa os para rutas/env.
-import sys                                                                                                          # Importa sys para manipular sys.path.
-ROOT = os.path.dirname(os.path.abspath(os.path.join(__file__, "..")))                                              # Calcula la ruta raíz del app Streamlit.
-if ROOT not in sys.path:                                                                                            # Si la ruta no está en sys.path...
-    sys.path.insert(0, ROOT)                                                                                        # ...la inserta para poder importar utils/*.
-# ------------------------------------------------------------------------------------------------------------------                                      # Fin sección.
+# --- bootstrap imports path (para utils/*) ---
+ROOT = os.path.dirname(os.path.abspath(os.path.join(__file__, "..")))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
-# --- Importaciones estándar/terceros -------------------------------------------------------------------------------                                     # Comentario sección.
-import re                                                                                                           # Expresiones regulares para validaciones.
-import requests                                                                                                     # HTTP cliente para consumir la API.
-import streamlit as st                                                                                              # Framework de UI Streamlit.
-from dotenv import load_dotenv                                                                                      # Carga de variables de entorno para front.
-# ------------------------------------------------------------------------------------------------------------------                                      # Fin sección.
+from utils.lang_selector import render_lang_selector
+from utils.translations import t
+from utils.nav import hide_native_sidebar_nav, render_nav
 
-# --- Cargar .env temprano -------------------------------------------------------------------------------------------                                     # Comentario sección.
-load_dotenv()                                                                                                       # Carga variables desde .env en tiempo de ejecución.
-API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")                                                  # Lee base URL de API con fallback local.
-# ------------------------------------------------------------------------------------------------------------------                                      # Fin sección.
+# --- setup ---
+load_dotenv()
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 
-# --- Importaciones del proyecto ------------------------------------------------------------------------------------                                     # Comentario sección.
-from utils.lang_selector import render_lang_selector                                                                # Selector de idioma para la UI.
-from utils.invite import normalize_invite_type                                                                       # Helper de normalización (no crítico, pero útil).
-from utils.translations import t                                                                                    # Función de traducción i18n.
-from utils.nav import hide_native_sidebar_nav, render_nav                                                           # Helpers de navegación/estilo.
-# ------------------------------------------------------------------------------------------------------------------                                      # Fin sección.
+st.set_page_config(
+    page_title="Formulario RSVP • Boda D&C",
+    page_icon="📝",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
 
-# --- Configuración de página ---------------------------------------------------------------------------------------                                     # Comentario sección.
-st.set_page_config(                                                                                                 # Configura metadatos de la página.
-    page_title="Formulario RSVP • Boda D&C",                                                                        # Título de pestaña del navegador.
-    page_icon="📝",                                                                                                  # Ícono de pestaña.
-    layout="centered",                                                                                               # Layout centrado para mejor lectura.
-    initial_sidebar_state="collapsed",                                                                               # Sidebar colapsada por defecto.
-)                                                                                                                    # Fin set_page_config.
+hide_native_sidebar_nav()
+lang = render_lang_selector()
+render_nav({
+    "pages/0_Login.py": t("nav.login", lang),
+    "pages/1_Formulario_RSVP.py": t("nav.form", lang),
+    "pages/2_Confirmado.py": t("nav.confirmed", lang),
+})
 
-# --- UI Global y Guardia de Autenticación --------------------------------------------------------------------------                                     # Comentario sección.
-hide_native_sidebar_nav()                                                                                           # Oculta navegación nativa de Streamlit.
-lang = render_lang_selector()                                                                                       # Renderiza selector de idioma y obtiene el idioma actual.
-render_nav({                                                                                                        # Dibuja navegación principal (breadcrumb simple).
-    "pages/0_Login.py": t("nav.login", lang),                                                                       # Enlace a Login.
-    "pages/1_Formulario_RSVP.py": t("nav.form", lang),                                                              # Enlace a Formulario.
-    "pages/2_Confirmado.py": t("nav.confirmed", lang),                                                              # Enlace a Confirmación.
-})                                                                                                                  # Fin render_nav.
+if not st.session_state.get("token"):
+    st.switch_page("pages/0_Login.py")
 
-if not st.session_state.get("token"):                                                                               # Si no hay token en sesión...
-    st.switch_page("pages/0_Login.py")                                                                              # ...redirige a Login inmediatamente.
+headers = {"Authorization": f"Bearer {st.session_state['token']}"}
 
-headers = {"Authorization": f"Bearer {st.session_state['token']}"}                                                 # Prepara encabezado Authorization Bearer para la API.
-
-# --- Estilos -------------------------------------------------------------------------------------------------------                                     # Comentario sección.
-st.markdown("""                                                                                                     # Inyecta CSS mínimo para tarjetas.
+# --- estilos básicos ---
+st.markdown(
+    """
     <style>
-      :root{ --bg:#FFFFFF; --text:#111; --border:#EAEAEA; --card:#F7F7F7; --shadow:0 4px 18px rgba(0,0,0,.06); --radius:16px; }
-      .form-card{ background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:28px; max-width:720px; margin:0 auto; }
+      :root{ --bg:#fff; --text:#111; --muted:#5f6c80; --border:#eaeaea; --card:#f6f9fe;
+             --shadow:0 10px 30px rgba(0,0,0,.08); --radius:18px; }
+      .main > div { max-width: 980px; margin: 0 auto; }
+      .hero-card { background:#edf3ff; border:1px solid #dfe9ff; border-radius:16px; padding:18px 20px; box-shadow:var(--shadow); }
+      .section-title { font-size:22px; font-weight:800; margin:28px 0 12px 0; }
+      .title-xl { font-size:34px; font-weight:800; margin:14px 0 8px 0; }
+      .subtitle { color:var(--muted); margin-bottom: 12px; }
+      .stTextInput input, .stTextArea textarea, .stSelectbox [data-baseweb="select"], .stMultiSelect [data-baseweb="select"] { border-radius:10px !important; }
     </style>
-""", unsafe_allow_html=True)                                                                                        # Permite HTML en el markdown para aplicar estilos.
+    """,
+    unsafe_allow_html=True,
+)
 
-# --- Helpers de validación -----------------------------------------------------------------------------------------                                     # Comentario sección.
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")                                                                # Regex simple para validar email básico.
-PHONE_RE = re.compile(r"^\+\d{8,15}$")                                                                              # Regex para teléfono en formato +######## (8–15 dígitos).
+# --- helpers ---
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+PHONE_RE = re.compile(r"^\+\d{8,15}$")
 
-def _is_valid_email(v: str) -> bool:                                                                                # Define helper de validación de email.
-    return bool(v and EMAIL_RE.match(v.strip()))                                                                     # Devuelve True si cumple el patrón.
+def _is_valid_email(v: str) -> bool:
+    return bool(v and EMAIL_RE.match(v.strip()))
 
-def _is_valid_phone(v: str) -> bool:                                                                                # Define helper de validación de teléfono.
-    if not v: return False                                                                                           # Si está vacío, inválido.
-    raw = v.strip().replace(" ", "").replace("-", "")                                                                # Limpia espacios y guiones.
-    return bool(PHONE_RE.match(raw))                                                                                 # Valida contra el patrón +########.
+def _is_valid_phone(v: str) -> bool:
+    if not v:
+        return False
+    raw = v.strip().replace(" ", "").replace("-", "")
+    return bool(PHONE_RE.match(raw))
 
-# --- Carga de datos (invitado + meta) ------------------------------------------------------------------------------                                     # Comentario sección.
-@st.cache_data(show_spinner=False)                                                                                   # Cachea la función para evitar llamadas repetidas.
-def fetch_initial_data(token):                                                                                       # Define función para traer datos iniciales.
-    guest_data, meta_options = {}, {}                                                                                # Inicializa contenedores de respuesta.
-    auth_headers = {"Authorization": f"Bearer {token}"}                                                              # Prepara headers con el token recibido.
-    try:                                                                                                             # Intenta llamar endpoints del backend.
-        r_guest = requests.get(f"{API_BASE_URL}/api/guest/me", headers=auth_headers, timeout=12)                    # Pide perfil del invitado autenticado.
-        r_guest.raise_for_status()                                                                                   # Lanza error si el status no es 2xx.
-        guest_data = r_guest.json()                                                                                  # Decodifica JSON del perfil.
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_initial_data(token: str) -> dict:
+    try:
+        h = {"Authorization": f"Bearer {token}"}
+        g = requests.get(f"{API_BASE_URL}/api/guest/me", headers=h, timeout=12)
+        g.raise_for_status()
+        guest = g.json()
+        m = requests.get(f"{API_BASE_URL}/api/meta/options", headers=h, timeout=8)
+        meta = m.json() if m.status_code == 200 else {}
+        return {"guest": guest, "meta": meta}
+    except requests.exceptions.RequestException:
+        return {"error": t("form.load_error", lang)}
 
-        r_meta = requests.get(f"{API_BASE_URL}/api/meta/options", headers=auth_headers, timeout=8)                  # Pide metadatos (sugerencias alergias, etc.).
-        if r_meta.status_code == 200:                                                                                # Si respondió OK...
-            meta_options = r_meta.json()                                                                             # ...lee JSON de opciones meta.
-    except requests.exceptions.RequestException as e:                                                                 # Si hubo excepción de requests...
-        status_code = e.response.status_code if getattr(e, "response", None) is not None else 503                    # Obtiene código si existe, si no 503.
-        return {"error": str(e), "status_code": status_code}                                                          # Devuelve error para manejo en UI.
-    return {"guest": guest_data, "meta": meta_options}                                                                # Devuelve datos agregados.
+def _post_rsvp(payload: dict) -> None:
+    try:
+        r = requests.post(f"{API_BASE_URL}/api/guest/me/rsvp", headers=headers, json=payload, timeout=20)
+        if r.status_code == 200:
+            st.session_state["last_rsvp"] = r.json()
+            st.switch_page("pages/2_Confirmado.py")
+        elif r.status_code == 401:
+            st.session_state.pop("token", None)
+            st.warning(t("form.session_expired", lang))
+            st.switch_page("pages/0_Login.py")
+        else:
+            # detalla si el backend retorna mensaje
+            try:
+                detail = r.json().get("detail")
+            except Exception:
+                detail = None
+            st.error(detail or t("form.generic_error", lang))
+    except requests.exceptions.RequestException:
+        st.error(t("form.net_err", lang))
 
-initial_data = fetch_initial_data(st.session_state.get("token"))                                                     # Ejecuta la carga con el token de sesión.
+# --- fetch ---
+data = fetch_initial_data(st.session_state["token"])
+if "error" in data:
+    st.error(data["error"])
+    st.stop()
 
-if "error" in initial_data:                                                                                          # Si la carga falló...
-    if initial_data.get("status_code") == 401:                                                                       # ...y fue 401 (token inválido/expirado)...
-        st.session_state.pop("token", None)                                                                          # ...borra el token de la sesión.
-        st.warning(t("form.session_expired", lang))                                                                   # Muestra aviso de sesión expirada.
-        st.switch_page("pages/0_Login.py")                                                                            # Redirige a Login.
-        st.stop()                                                                                                     # Detiene la ejecución de la página.
-    else:                                                                                                             # En otros errores...
-        st.error(t("form.load_error", lang))                                                                          # ...muestra error genérico de carga.
-        st.stop()                                                                                                     # Detiene ejecución.
+guest = data.get("guest", {}) or {}
+meta  = data.get("meta",  {}) or {}
 
-guest = initial_data.get("guest", {})                                                                                # Extrae datos del invitado del resultado.
-meta = initial_data.get("meta", {})                                                                                  # Extrae metadatos del resultado.
-allergy_suggestions = (                                                                                              # Calcula lista de sugerencias de alergias.
-    meta.get("allergy_suggestions")                                                                                  # Intenta con clave 1.
-    or meta.get("allergens")                                                                                          # Fallback a clave 2.
-    or meta.get("suggestions")                                                                                        # Fallback a clave 3.
-    or []                                                                                                             # Fallback final: lista vacía.
-)                                                                                                                     # Fin cálculo.
+# --- derivados ---
+full_name = (guest.get("full_name") or "").strip()
+max_accomp = int(guest.get("max_accomp") or 0)
+allergy_suggestions: List[str] = meta.get("allergy_suggestions") or meta.get("allergens") or []
 
-# --- Panel informativo de alcance de invitación --------------------------------------------------------------------                                     # Comentario sección.
-invite_scope: str = (guest.get("invite_scope") or "reception-only").strip()                                          # Lee alcance de invitación (normalizado).
-invited_to_ceremony: bool = bool(guest.get("invited_to_ceremony"))                                                   # Booleano: si está invitado a ceremonia.
-ceremony_time: str = st.secrets.get("CEREMONY_TIME", "15:00")                                                        # Hora tentativa de ceremonia (secrets).
-reception_time: str = st.secrets.get("RECEPTION_TIME", "17:00")                                                      # Hora tentativa de recepción (secrets).
+# invited_full robusto (maneja strings)
+invited_flag_raw = str(guest.get("invited_to_ceremony", False)).strip().lower()
+invited_full = invited_flag_raw in ("true", "1", "yes", "y", "si", "sí")
 
-panel_title: str = t("invite.panel_title", lang)                                                                     # Título del panel (i18n).
-scope_text_key: str = "invite.scope.full" if invited_to_ceremony else "invite.scope.reception"                       # Clave i18n según alcance.
-scope_text: str = t(scope_text_key, lang)                                                                            # Texto del alcance (i18n).
-times_hint: str = t("invite.times.hint", lang).format(                                                               # Texto de pista con horarios.
-    ceremony_time=ceremony_time, reception_time=reception_time                                                       # Inserta horas formateadas.
-)                                                                                                                     # Fin format.
+ceremony_time  = st.secrets.get("CEREMONY_TIME", "15:00")
+reception_time = st.secrets.get("RECEPTION_TIME", "17:00")
 
-st.info(f"### {panel_title}\n\n{scope_text}\n\n_{times_hint}_")                                                      # Muestra panel informativo.
+# --- tarjeta invitación ---
+st.markdown('<div class="hero-card">', unsafe_allow_html=True)
+st.markdown(f"### {t('form.invite_title', lang)}")
+if invited_full:
+    st.write(t("form.invite_full_access", lang))
+    st.write(f"_{t('form.time_ceremony', lang)} {ceremony_time} · {t('form.time_reception', lang)} {reception_time}_")
+else:
+    st.write(t("form.invite_reception_only", lang))
+    st.write(f"_{t('form.time_reception', lang)}: {reception_time}_")
+if max_accomp > 0:
+    plural = "" if max_accomp == 1 else "s"
+    st.write(t("form.accomp_note", lang).format(max_accomp=max_accomp, plural=plural))
+st.markdown("</div>", unsafe_allow_html=True)
 
-# --- Variables para UI -------------------------------------------------------------------------------------------------                               # Comentario sección.
-full_name = guest.get("full_name", "")                                                                              # Nombre del invitado para saludo.
-max_accomp = int(guest.get("max_accomp", 0))                                                                        # Máximo de acompañantes permitido.
+# --- saludo ---
+st.markdown(f'<div class="title-xl">👋 {t("form.hi", lang)}, {full_name}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="subtitle">{t("form.subtitle", lang)}</div>', unsafe_allow_html=True)
 
-# --- Interfaz ---------------------------------------------------------------------------------------------------------                               # Comentario sección.
-st.markdown('<div class="form-card">', unsafe_allow_html=True)                                                      # Abre tarjeta visual contenedora.
-st.title(f"👋 {t('form.hi', lang)} {full_name}")                                                                    # Título con saludo e i18n.
-st.caption(t("form.subtitle", lang))                                                                                # Subtítulo descriptivo (i18n).
+# --- asistencia (radio) ---
+att_choice = st.radio(t("form.attending", lang), [t("form.yes", lang), t("form.no", lang)], horizontal=True)
+is_attending = (att_choice == t("form.yes", lang))
 
-attending = st.radio(                                                                                               # Control de radio Sí/No asistencia.
-    t("form.attending", lang),                                                                                      # Etiqueta i18n de la pregunta.
-    [t("form.yes", lang), t("form.no", lang)],                                                                      # Opciones i18n.
-    horizontal=True,                                                                                                # Disposición horizontal.
-    index=0 if guest.get("confirmed", True) else 1                                                                  # Índice por defecto según estado previo.
-)                                                                                                                   # Fin radio.
+# --- flujo NO asiste ---
+if not is_attending:
+    st.warning(t("form.no_attend_short", lang))
+    # Pequeño cuadro para dejar nota (opcional) sin complicar el flujo
+    msg_no = st.text_area(
+        label=t("form.notes.expander_label", lang),
+        placeholder=t("form.notes.placeholder", lang),
+        max_chars=500,
+        height=120,
+        label_visibility="collapsed",
+        key="notes_no",
+    )
+    if st.button(t("form.submit", lang), type="primary"):
+        payload = {
+            "attending": False,
+            "companions": [],
+            "allergies": None,
+            "notes": (msg_no.strip() or None),
+            "email": None,
+            "phone": None,
+        }
+        with st.spinner(t("form.sending", lang)):
+            _post_rsvp(payload)
+    st.stop()
 
-def send_rsvp_to_api(payload):                                                                                      # Define helper para POST al backend.
-    try:                                                                                                            # Intenta enviar la petición.
-        resp = requests.post(f"{API_BASE_URL}/api/guest/me/rsvp", headers=headers, json=payload, timeout=20)       # Envía POST con JSON y timeout.
-        if resp.status_code == 200:                                                                                 # Si fue exitoso...
-            st.session_state["last_rsvp"] = resp.json()                                                             # ...guarda respuesta en sesión.
-            st.switch_page("pages/2_Confirmado.py")                                                                 # ...navega a página de confirmación.
-        elif resp.status_code == 401:                                                                               # Si 401 (token inválido/expirado)...
-            st.session_state.pop("token", None)                                                                     # ...borra token.
-            st.warning(t("form.session_expired", lang))                                                             # ...avisa en UI.
-            st.switch_page("pages/0_Login.py")                                                                       # ...redirige a Login.
-            st.stop()                                                                                               # ...detiene ejecución.
-        else:                                                                                                       # Otros códigos (4xx/5xx)...
-            st.error(resp.json().get("detail", "Ocurrió un error al guardar tu respuesta."))                        # ...muestra error del backend o genérico.
-    except requests.exceptions.RequestException:                                                                     # En excepción de red/timeout...
-        st.error(t("form.net_err", lang))                                                                           # ...muestra error de red i18n.
+# --- controles de acompañantes (FUERA del form, con rerun) ---
+st.markdown(f'<div class="section-title">{t("form.companions_title", lang)}</div>', unsafe_allow_html=True)
+st.caption(t("form.companions_db_note", lang))
 
-# --- Rama: NO asiste ---------------------------------------------------------------------------------------------------                           # Comentario sección.
-if attending == t("form.no", lang):                                                                                 # Si seleccionó que NO asiste...
-    st.subheader(t("form.contact_title", lang))                                                                     # Subtítulo de contacto.
-    st.caption(t("form.contact_note", lang))                                                                        # Nota aclaratoria de contacto.
-    email_input_no = st.text_input(t("form.contact_email", lang), value=(guest.get("email") or ""), key="contact_email_no")  # Input email por si quiere actualizar.
-    phone_input_no = st.text_input(t("form.contact_phone", lang), value=(guest.get("phone") or ""), key="contact_phone_no")  # Input teléfono por si quiere actualizar.
+if "comp_count" not in st.session_state:
+    # sugerimos lo precargado pero acotado por máx
+    existing = guest.get("companions") or []
+    st.session_state.comp_count = min(len(existing), max_accomp)
 
-    # --- NUEVO: Área de notas opcional (no asiste) ------------------------------------------------------------------                            # Comentario novedad.
-    notes_no = st.text_area(                                                                                        # Renderiza campo de notas (textarea).
-        label=t("form.notes.label", lang),                                                                          # Etiqueta i18n (ej. "¿Quieres dejarnos un mensaje?").
-        value="",                                                                                                   # Valor inicial vacío.
-        placeholder=t("form.notes.placeholder", lang),                                                              # Placeholder i18n (ej. "Escribe aquí tus comentarios...").
-        help=t("form.notes.help", lang),                                                                            # Texto de ayuda i18n (ej. "Opcional. Máx. 500 caracteres.").
-        max_chars=500,                                                                                               # Limita a 500 caracteres.
-        height=120,                                                                                                  # Altura cómoda de escritura.
-        key="notes_no"                                                                                               # Clave única de estado para Streamlit.
-    )                                                                                                                # Fin text_area.
+if max_accomp <= 0:
+    st.info(t("form.no_companions_info", lang))
+    st.session_state.comp_count = 0
+else:
+    bring = st.radio(
+        t("form.bring_companions", lang),
+        [t("form.yes", lang), t("form.no", lang)],
+        index=0 if st.session_state.comp_count > 0 else 1,
+        horizontal=True,
+        key="bring_companions_radio",
+    )
+    if bring == t("form.no", lang):
+        if st.session_state.comp_count != 0:
+            st.session_state.comp_count = 0
+            st.rerun()
+    else:
+        # SI → seleccionar cantidad 1..máx
+        options = list(range(1, max_accomp + 1))
+        current = st.session_state.comp_count if st.session_state.comp_count > 0 else 1
+        try:
+            idx = options.index(current)
+        except ValueError:
+            idx = len(options) - 1
+            st.session_state.comp_count = options[idx]
+        new_count = st.selectbox(t("form.companions_count", lang), options, index=idx, key="companions_count_select")
+        if new_count != st.session_state.comp_count:
+            st.session_state.comp_count = new_count
+            st.rerun()
 
-    if st.button(t("form.submit", lang)):                                                                           # Botón de envío para caso 'no asiste'.
-        email_clean_no = email_input_no.strip()                                                                      # Normaliza email (trim).
-        phone_clean_no = phone_input_no.strip().replace(" ", "").replace("-", "")                                   # Normaliza teléfono (quita espacios/guiones).
-        if not email_clean_no and not phone_clean_no:                                                                # Exige al menos un medio de contacto.
-            st.error(t("form.contact_required_one", lang)); st.stop()                                               # Muestra error i18n y detiene.
-        if email_clean_no and not _is_valid_email(email_clean_no):                                                  # Valida email si viene.
-            st.error(t("form.contact_invalid_email", lang)); st.stop()                                              # Error de email inválido.
-        if phone_clean_no and not _is_valid_phone(phone_clean_no):                                                  # Valida teléfono si viene.
-            st.error(t("form.contact_invalid_phone", lang)); st.stop()                                              # Error de teléfono inválido.
+st.write("")  # pequeño respiro visual
 
-        payload = {                                                                                                  # Construye payload JSON para backend.
-            "attending": False,                                                                                      # Marca que NO asiste.
-            "companions": [],                                                                                        # Sin acompañantes.
-            "allergies": None,                                                                                       # Sin alergias cuando no asiste.
-            "notes": (notes_no.strip() or None),                                                                     # NUEVO: envía notas (None si vacío).
-            "email": email_clean_no or None,                                                                         # Incluye email si lo proporcionó (si backend lo ignora, no rompe).
-            "phone": phone_clean_no or None,                                                                         # Incluye teléfono si lo proporcionó (ídem comentario).
-        }                                                                                                            # Fin payload.
-        with st.spinner(t("form.sending", lang)):                                                                    # Spinner mientras envía.
-            send_rsvp_to_api(payload)                                                                                # Llama helper de envío.
+# --- FORM PRINCIPAL (envío) ---
+with st.form("rsvp_form_yes"):
+    # Contacto
+    st.markdown(f'<div class="section-title">{t("form.contact_title", lang)}</div>', unsafe_allow_html=True)
+    st.caption(t("form.contact_caption", lang))
+    email_input = st.text_input(t("form.field_email", lang), value=(guest.get("email") or "").strip())
+    phone_input = st.text_input(t("form.field_phone", lang), value=(guest.get("phone") or "").strip())
 
-# --- Rama: SÍ asiste ---------------------------------------------------------------------------------------------------                           # Comentario sección.
-else:                                                                                                               # Si seleccionó que SÍ asiste...
-    with st.form("rsvp_form"):                                                                                      # Usa un formulario para agrupar inputs y enviar juntos.
-        st.subheader(t('form.titular_allergies', lang))                                                             # Subtítulo para alergias del titular.
-        default_allergies = guest.get("allergies", "").split(", ") if guest.get("allergies") else []                # Calcula selección inicial de alergias (si existían).
-        titular_allergies_selected = st.multiselect(t("form.allergy_suggestions", lang), options=allergy_suggestions, default=default_allergies)  # Selector múltiple con sugerencias.
-        titular_allergies_other = st.text_input(t('form.other_allergy', lang))                                      # Campo para otras alergias (texto libre).
+    # Alergias titular
+    st.markdown(f'<div class="section-title">{t("form.titular_allergies", lang)}</div>', unsafe_allow_html=True)
+    st.caption(t("form.allergies_caption", lang))
+    default_allergies = [s.strip() for s in (guest.get("allergies") or "").split(",") if s.strip()]
+    titular_allergies = st.multiselect(
+        t("form.allergies_or_restrictions", lang),
+        options=allergy_suggestions,
+        default=default_allergies,
+        label_visibility="collapsed",
+        key="titular_allergies",
+    )
 
-        st.subheader(t("form.contact_title", lang))                                                                 # Subtítulo de contacto.
-        st.caption(t("form.contact_note", lang))                                                                    # Nota de contacto.
-        default_email = (guest.get("email") or "").strip()                                                          # Email por defecto del invitado.
-        default_phone = (guest.get("phone") or "").strip()                                                          # Teléfono por defecto del invitado.
-        email_input = st.text_input(t("form.contact_email", lang), value=default_email, key="contact_email")        # Input de email.
-        phone_input = st.text_input(t("form.contact_phone", lang), value=default_phone, key="contact_phone")        # Input de teléfono.
+    # Filas de acompañantes (horizontales)
+    companions_data: List[dict] = []
+    comp_defaults = guest.get("companions", []) or []
 
-        st.subheader(t("form.companions_title", lang))                                                              # Subtítulo de acompañantes.
-        existing_companions = guest.get("companions", []) or []                                                     # Carga acompañantes guardados (si los hay).
-        default_comp = min(len(existing_companions), max(0, max_accomp))                                            # Sugiere cantidad inicial sin pasar el máximo.
-        comp_count = st.slider(t("form.companions_count", lang), 0, max_accomp, default_comp)                       # Slider para cantidad de acompañantes.
+    for i in range(st.session_state.comp_count):
+        st.markdown(f"**{t('form.companion_label', lang)} {i+1}**")
+        def_name = comp_defaults[i]["name"] if i < len(comp_defaults) else ""
+        def_is_child = comp_defaults[i]["is_child"] if i < len(comp_defaults) else False
+        def_allergies = (comp_defaults[i].get("allergies") or "") if i < len(comp_defaults) else ""
+        def_allergies_list = [s.strip() for s in def_allergies.split(",") if s.strip()]
 
-        companions_data = []                                                                                        # Inicializa lista de acompañantes que se enviará.
-        for i in range(comp_count):                                                                                 # Itera por el número de acompañantes indicados.
-            st.markdown(f"**Acompañante #{i+1}**")                                                                  # Título del bloque de cada acompañante.
-            comp_defaults = guest.get("companions", [])                                                             # Lee defaults de acompañantes previos.
-            default_name = comp_defaults[i]["name"] if i < len(comp_defaults) else ""                               # Nombre por defecto si existía.
-            default_is_child = comp_defaults[i]["is_child"] if i < len(comp_defaults) else False                    # Flag niño por defecto si existía.
-            default_c_allergies = comp_defaults[i]["allergies"].split(", ") if i < len(comp_defaults) and comp_defaults[i].get("allergies") else []  # Alergias por defecto si existían.
-            c_name = st.text_input(t("form.companion_name", lang), value=default_name, key=f"c_name_{i}")           # Input nombre acompañante.
-            c_is_child = st.checkbox(t("form.companion_is_child", lang), value=default_is_child, key=f"c_is_child_{i}")  # Checkbox niño/adulto.
-            c_allergies_selected = st.multiselect(t("form.allergy_suggestions", lang), options=allergy_suggestions, default=default_c_allergies, key=f"c_allergies_{i}")  # Multi-select alergias.
-            c_allergies_other = st.text_input(f"{t('form.other_allergy', lang)} #{i+1}", key=f"c_allergies_other_{i}")  # Campo de otras alergias (texto libre).
-            companions_data.append({                                                                                 # Agrega el acompañante armado a la lista.
-                "name": c_name,                                                                                      # Nombre del acompañante.
-                "is_child": c_is_child,                                                                              # Flag niño/adulto.
-                "allergies": ", ".join([*c_allergies_selected, c_allergies_other.strip()] if c_allergies_other.strip() else c_allergies_selected) or None  # Alergias combinadas o None.
-            })                                                                                                       # Fin append.
+        col_name, col_kind, col_all = st.columns([2.0, 1.0, 2.0])
 
-        # --- NUEVO: Área de notas opcional (sí asiste) -------------------------------------------------------------                            # Comentario novedad.
-        notes_yes = st.text_area(                                                                                     # Renderiza campo de notas en el formulario.
-            label=t("form.notes.label", lang),                                                                         # Etiqueta i18n.
-            value="",                                                                                                  # Valor inicial vacío.
-            placeholder=t("form.notes.placeholder", lang),                                                             # Placeholder i18n.
-            help=t("form.notes.help", lang),                                                                           # Texto de ayuda i18n.
-            max_chars=500,                                                                                             # Límite de 500 caracteres.
-            height=120,                                                                                                # Altura del textarea.
-            key="notes_yes"                                                                                            # Clave única de estado.
-        )                                                                                                              # Fin text_area.
-        st.caption(f"{len(notes_yes)}/500")                                                                            # Muestra contador simple de caracteres usados.
+        with col_name:
+            c_name = st.text_input(
+                t("form.field_name", lang),
+                value=def_name,
+                key=f"c_name_{i}",
+                placeholder=t("form.placeholder_fullname", lang),
+            )
 
-        submitted = st.form_submit_button(t("form.submit", lang))                                                      # Botón de envío del formulario.
-        if submitted:                                                                                                   # Si el usuario presionó enviar...
-            email_clean = email_input.strip()                                                                           # Normaliza email titular.
-            phone_clean = phone_input.strip().replace(" ", "").replace("-", "")                                        # Normaliza teléfono titular.
-            if not email_clean and not phone_clean:                                                                     # Exige al menos un medio de contacto.
-                st.error(t("form.contact_required_one", lang)); st.stop()                                              # Error y detención.
-            if email_clean and not _is_valid_email(email_clean):                                                       # Valida email si existe.
-                st.error(t("form.contact_invalid_email", lang)); st.stop()                                             # Error de email inválido.
-            if phone_clean and not _is_valid_phone(phone_clean):                                                       # Valida teléfono si existe.
-                st.error(t("form.contact_invalid_phone", lang)); st.stop()                                             # Error de teléfono inválido.
+        with col_kind:
+            tipo_txt = st.selectbox(
+                t("form.child_or_adult", lang),
+                [t("form.adult", lang), t("form.child", lang)],
+                index=(1 if def_is_child else 0),
+                key=f"c_is_child_{i}",
+            )
+            c_is_child = (tipo_txt == t("form.child", lang))
 
-            final_allergies = ", ".join([*titular_allergies_selected, titular_allergies_other.strip()] if titular_allergies_other.strip() else titular_allergies_selected) or None  # Une alergias seleccionadas y libres.
-            payload = {                                                                                                # Construye payload JSON para backend.
-                "attending": True,                                                                                     # Marca que SÍ asiste.
-                "allergies": final_allergies,                                                                          # Alergias del titular (o None).
-                "notes": (notes_yes.strip() or None),                                                                  # NUEVO: envía notas (None si vacío).
-                "companions": companions_data,                                                                          # Lista de acompañantes armada.
-                "email": email_clean or None,                                                                          # Incluye email si lo proporcionó (si backend lo ignora, no rompe).
-                "phone": phone_clean or None,                                                                          # Incluye teléfono si lo proporcionó (ídem comentario).
-            }                                                                                                          # Fin payload.
-            with st.spinner(t("form.sending", lang)):                                                                  # Muestra spinner de envío.
-                send_rsvp_to_api(payload)                                                                              # Llama helper de envío.
+        with col_all:
+            c_allergies_sel = st.multiselect(
+                t("form.allergies_or_restrictions", lang),
+                options=allergy_suggestions,
+                default=def_allergies_list,
+                key=f"c_allergies_{i}",
+            )
 
-st.markdown("</div>", unsafe_allow_html=True)                                                                          # Cierra el contenedor visual de la tarjeta.
+        companions_data.append({
+            "name": c_name.strip(),
+            "is_child": c_is_child,
+            "allergies": (", ".join(c_allergies_sel) or None),
+        })
+
+    # Mensaje opcional en expander para no estorbar
+    with st.expander(t("form.notes.expander_label", lang)):
+        msg_yes = st.text_area(
+            label="msg",
+            placeholder=t("form.notes.placeholder", lang),
+            max_chars=500,
+            height=120,
+            label_visibility="collapsed",
+            key="notes_yes",
+        )
+
+    # Botones (en el form solo el de enviar)
+    submitted = st.form_submit_button(t("form.submit", lang), type="primary", use_container_width=True)
+
+# Botón Cancelar fuera del form (no envía)
+col_cancel = st.columns([1, 1, 1])[1]
+with col_cancel:
+    if st.button(t("form.cancel", lang), use_container_width=True):
+        # “Cancelar” descarta cambios visuales y te deja en el inicio del formulario
+        # (no envía nada, no navega a “Confirmado”).
+        for k in [k for k in st.session_state.keys() if k.startswith(("c_name_", "c_is_child_", "c_allergies_", "notes_yes"))]:
+            st.session_state.pop(k, None)
+        st.experimental_set_query_params()  # limpia la URL
+        st.toast(t("form.select_option", lang))
+        st.rerun()
+
+# Envío (validaciones y POST)
+if submitted:
+    email_clean = (email_input or "").strip()
+    phone_clean = (phone_input or "").strip().replace(" ", "").replace("-", "")
+
+    if not email_clean and not phone_clean:
+        st.error(t("form.contact_required_one", lang)); st.stop()
+    if email_clean and not _is_valid_email(email_clean):
+        st.error(t("form.contact_invalid_email", lang)); st.stop()
+    if phone_clean and not _is_valid_phone(phone_clean):
+        st.error(t("form.contact_invalid_phone", lang)); st.stop()
+
+    # Si hay acompañantes, todos con nombre
+    if st.session_state.comp_count > 0:
+        vacios = [i for i, c in enumerate(companions_data, start=1) if not c["name"]]
+        if vacios:
+            st.error(t("form.companion_name_required", lang)); st.stop()
+        companions_final = companions_data
+    else:
+        companions_final = []
+
+    payload = {
+        "attending": True,
+        "allergies": (", ".join(titular_allergies) or None),
+        "companions": companions_final,
+        "notes": (msg_yes.strip() or None) if "msg_yes" in locals() else None,
+        "email": email_clean or None,
+        "phone": phone_clean or None,
+    }
+
+    with st.spinner(t("form.sending", lang)):
+        _post_rsvp(payload)
