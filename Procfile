@@ -1,1 +1,3 @@
-web: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4
+web: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4
+
+
