@@ -5,7 +5,23 @@
 # Extras opcionales: botones de rescate si falla la navegación y logout por query.
 # =================================================================================
 
-import streamlit as st                           # Importa Streamlit para UI y navegación.
+# ================================================================
+# 🌙 MODO MANTENIMIENTO (Controlado por variable de entorno)
+# ================================================================
+import os
+import streamlit as st
+
+# Si MAINTENANCE_MODE está activo, mostrar aviso y detener la app
+if os.getenv("MAINTENANCE_MODE") == "1":
+    st.set_page_config(page_title="Mantenimiento", page_icon="🌙")
+    st.warning("🌙 El sistema está en mantenimiento.\n\nVuelve más tarde, por favor.")
+    st.stop()
+
+# ================================================================
+# Fin del modo mantenimiento
+# ================================================================
+
+
 
 st.set_page_config(                              # Configura metadatos básicos de la app.
     page_title="RSVP • Daniela & Cristian",     # Título consistente en todo el proyecto.
