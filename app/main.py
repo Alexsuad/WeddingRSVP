@@ -5,7 +5,6 @@
 # ---------------------------------------------------------------------------------             # Separador de sección.
 # - Crea la instancia de FastAPI                                                                # Lista responsabilidades del módulo.
 # - Configura CORS                                                                              # Continua la lista.
-# - Inicializa la BD y crea tablas                                                             # Continua la lista.
 # - Registra routers modulares (auth, guest, meta, admin)                                      # Continua la lista.
 # =================================================================================             # Fin del encabezado.
 
@@ -54,7 +53,15 @@ app.add_middleware(                                                             
     allow_headers=["*"],                                                                         # Permite todos los headers (autenticación personalizados, etc.).
 )                                                                                                # Cierra la configuración del middleware CORS.
 
-models.Base.metadata.create_all(bind=engine)                                                    # Crea las tablas en la BD si aún no existen (migración mínima).
+# #############################################################################################
+# ### INICIO DE LA CORRECCIÓN: Eliminar `create_all`                                        ###
+# #############################################################################################
+# Esta línea se elimina porque la gestión del esquema de la BD en producción debe ser
+# manejada exclusivamente por Alembic, que ya se ejecuta en el `Procfile`.
+# models.Base.metadata.create_all(bind=engine)
+# #############################################################################################
+# ### FIN DE LA CORRECCIÓN                                                                  ###
+# #############################################################################################
 
 @app.on_event("startup")                                                                         # Registra un hook que se ejecuta cuando la app arranca.
 def _startup_db_trace() -> None:                                                                 # Define la función a ejecutar en el evento de startup.
@@ -64,8 +71,3 @@ app.include_router(auth_routes.router)                                          
 app.include_router(guest.router)                                                                 # Monta el router de invitados (gestión de guest).
 app.include_router(meta.router)                                                                  # Monta el router meta (información de la API).
 app.include_router(admin.router)                                                                 # Monta el router admin (endpoints protegidos por API key).
-
-# (Opcional) punto de salud simple:                                                              # Comentario: ejemplo de health check sin cuerpo.
-# from fastapi import status                                                                     # Ejemplo de import para health check.
-# @app.get("/health", status_code=status.HTTP_204_NO_CONTENT)                                    # Ruta /health que devuelve 204.
-# def health(): return None                                                                      # Handler que no retorna contenido (solo estado 204).

@@ -1,3 +1,11 @@
+#.gitignore
+# ============================================================
+# 🧩 CONFIGURACIÓN GENERAL DE IGNORADOS PARA EL PROYECTO RSVP
+# ------------------------------------------------------------
+# Evita subir archivos locales, bases de datos, claves o datos
+# personales de invitados al repositorio público.
+# ============================================================
+
 # Entornos virtuales
 .venv/
 venv/
@@ -5,9 +13,17 @@ venv/
 # Variables de entorno y secretos
 .env
 .envrc
+secrets.*
+*.env
+*.env.*
 
-# Bases de datos locales
+# Bases de datos locales y respaldos
+wedding.db
 *.db
+/data/
+backups/
+*.bak
+*.sql
 
 # Cachés de Python
 __pycache__/
@@ -16,20 +32,31 @@ __pycache__/
 # Archivos de logs y directorios temporales
 logs/
 *.log
+tmp/
+temp/
 
 # Archivos de configuración de editor
 .vscode/
 .idea/
 
-# Otros archivos temporales o exportados
+# Archivos exportados o de prueba
 *.csv
-*.bak
+*.zip
+*.tar
+*.gz
 
+# Configuración local de Streamlit (puede contener secretos)
 .streamlit/secrets.toml
 
-# Nunca subas estos:
+# Claves, credenciales o scripts internos
 keys/
-subir_git_embebido.sh
 .ssh/
 *.pem
 *.key
+subir_git_embebido.sh
+
+# ============================================================
+# 🛡️ NOTA:
+# Este archivo protege datos sensibles del proyecto.
+# Nunca borres ni comentes estas reglas.
+# ============================================================
