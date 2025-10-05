@@ -6,95 +6,148 @@
 # =================================================================================
 
 # ================================================================
-# 🌙 MAINTENANCE MODE (Controlled by environment variable)
+# 🌙 MAINTENANCE MODE (Controlado por variables) + THEME_MODE
 # ================================================================
-import os                                                                    # Reads environment variables like MAINTENANCE_MODE.
-import streamlit as st                                                       # Used to build the user interface.
+import os                                                                    # Importa 'os' para leer variables de entorno (MAINTENANCE_MODE, THEME_MODE, etc.).
+import streamlit as st                                                       # Importa Streamlit para construir la interfaz de usuario.
 
-# If MAINTENANCE_MODE=1, show elegant maintenance notice and stop the app.
-if os.getenv("MAINTENANCE_MODE") == "1":                                     # Checks if MAINTENANCE_MODE="1" to activate maintenance mode.
-    st.set_page_config(                                                      # Configures metadata for maintenance mode.
-        page_title="💍 Daniela & Cristian — Maintenance",                    # Browser tab title.
-        page_icon="💍",                                                      # Tab icon (ring emoji).
-        layout="centered"                                                    # Centers content for better presentation.
-    )                                                                        # End of page configuration.
+MAINTENANCE = os.getenv("MAINTENANCE_MODE", "0")                             # Lee si el modo mantenimiento está activo: "1"=sí, "0"=no (por defecto).
+THEME_MODE  = os.getenv("THEME_MODE", "light").lower()                       # Lee el tema visual: "light" (por defecto) o "dark".
+BG_URL      = os.getenv(                                                     # URL opcional de la imagen de fondo durante el mantenimiento.
+    "MAINTENANCE_BG_URL",
+    "https://rsvp.suarezsiicawedding.com/assets/fondo_mantenimiento.jpg"     # Puedes cambiarla por tu ruta real en el dominio.
+)                                                                            # Fin de lectura de variables.
 
-    st.markdown(                                                             # Injects HTML/CSS to display an elegant maintenance card.
-        """
+if MAINTENANCE == "1":                                                       # Si el modo mantenimiento está activado…
+    st.set_page_config(                                                      # Configura metadatos de la página (solo para el modo mantenimiento).
+        page_title="💍 Daniela & Cristian — Maintenance",                    # Título de la pestaña del navegador.
+        page_icon="💍",                                                      # Ícono de la pestaña (anillo de boda).
+        layout="centered"                                                    # Centra el contenido en pantalla.
+    )                                                                        # Fin de set_page_config.
+
+    # ----- Paletas y filtros según THEME_MODE -----
+    if THEME_MODE == "dark":                                                 # Si el tema indicado es oscuro…
+        bg_color   = "#1a1410"                                               # Color base del fondo (oscuro cálido).
+        card_bg    = "#1f1a17ee"                                             # Fondo de la tarjeta (oscuro con transparencia).
+        card_bd    = "#3a2f29"                                               # Borde sutil de la tarjeta en modo oscuro.
+        text_main  = "#f3e9df"                                               # Color de texto principal (marfil claro).
+        accent     = "#d4a373"                                               # Acento dorado suave.
+        blur_css   = "blur(10px) brightness(0.7) sepia(0.1)"                 # Difuminado + oscurecer + tono cálido.
+    else:                                                                    # En cualquier otro caso (tema claro)…
+        bg_color   = "#fffaf7"                                               # Color base del fondo (marfil claro).
+        card_bg    = "#ffffffee"                                             # Fondo de la tarjeta (blanco con transparencia).
+        card_bd    = "#e9e1d8"                                               # Borde sutil claro.
+        text_main  = "#3e3e3e"                                               # Color de texto principal (gris cálido).
+        accent     = "#d4a373"                                               # Acento dorado suave.
+        blur_css   = "blur(8px) brightness(1.05)"                            # Difuminado + leve realce de luz.
+
+    # ----- Estilos + tarjeta elegante con fondo difuminado -----
+    st.markdown(                                                             # Inyecta HTML/CSS del modo mantenimiento.
+        f"""
         <style>
-          body { background:#fffaf7; }                                       /* Soft ivory background, coherent with main website. */
-          .card{
-            background:#ffffffee; border:1px solid #e9e1d8; border-radius:20px;
-            padding:32px 26px; max-width:720px; margin:12vh auto; text-align:center;
-            box-shadow:0 10px 30px rgba(0,0,0,.08);
-          }
-          h1{ font-family:serif; color:#5a4632; margin:.2em 0; }             /* Serif font and warm color tone. */
-          p{ color:#3e3e3e; }                                                /* Soft gray text for readability. */
-          .heart{ font-size:28px; color:#d4a373; }                           /* Golden accent for wedding theme. */
-        </style>
-        <div class="card">                                                   <!-- Central content card -->
-          <div class="heart">💍</div>                                        <!-- Icon -->
-          <h1>Daniela & Cristian</h1>                                        <!-- Couple's names -->
-          <p>We are preparing a special experience for you.</p>              <!-- Main message -->
-          <p><em>Please come back soon to confirm your attendance.</em></p>  <!-- Secondary message -->
-        </div>
-        """,                                                                 # Closes HTML/CSS block.
-        unsafe_allow_html=True                                               # Allows HTML rendering in Streamlit.
-    )                                                                        # End of markdown injection.
+          /* Fondo base según tema */
+          body {{
+            background-color: {bg_color};                                    /* Color de fondo base (claro u oscuro). */
+          }}
 
-    st.stop()                                                                # Stops execution of the rest of the app while in maintenance.
+          /* Capa de imagen difuminada de pantalla completa */
+          body::before {{
+            content: "";
+            position: fixed;
+            inset: 0;                                                        /* Ataja top/right/bottom/left en una sola propiedad. */
+            background-image: url('{BG_URL}');                               /* Imagen de fondo configurable por variable. */
+            background-size: cover;                                          /* Escala para cubrir toda la pantalla. */
+            background-position: center;                                     /* Centra la imagen. */
+            filter: {blur_css};                                              /* Aplica blur y ajuste de brillo/tono según tema. */
+            z-index: -1;                                                     /* Envía la imagen detrás del contenido. */
+          }}
+
+          /* Tarjeta central elegante */
+          .card {{
+            background: {card_bg};                                           /* Fondo de la tarjeta con transparencia. */
+            border: 1px solid {card_bd};                                     /* Borde sutil coherente con el tema. */
+            border-radius: 20px;                                             /* Esquinas redondeadas. */
+            padding: 32px 26px;                                              /* Espaciado interno cómodo. */
+            max-width: 720px;                                                /* Ancho máximo para buena lectura. */
+            margin: 12vh auto;                                               /* Centra vertical y horizontalmente con respiro. */
+            text-align: center;                                              /* Alinea el texto al centro. */
+            box-shadow: 0 10px 30px rgba(0,0,0,.18);                         /* Sombra suave (flotado). */
+          }}
+
+          /* Tipografía y colores */
+          h1 {{
+            font-family: serif;                                              /* Tipografía clásica que combina con bodas. */
+            color: {text_main};                                              /* Color del título según tema. */
+            margin: .2em 0;                                                  /* Espaciado vertical del título. */
+          }}
+          p {{ color: {text_main}; }}                                        /* Color de párrafos según tema. */
+          .heart {{ font-size: 28px; color: {accent}; }}                     /* Ícono/acento dorado. */
+        </style>
+
+        <!-- Contenido de la tarjeta -->
+        <div class="card">
+          <div class="heart">💍</div>
+          <h1>Daniela & Cristian</h1>
+          <p>We are preparing a special experience for you.</p>
+          <p><em>Please come back soon to confirm your attendance.</em></p>
+        </div>
+        """,                                                                 # Fin del bloque HTML/CSS.
+        unsafe_allow_html=True                                               # Permite renderizar HTML personalizado.
+    )                                                                        # Fin de st.markdown.
+
+    st.stop()                                                                # Detiene el resto de la app mientras haya mantenimiento.
 # ================================================================
 # End of maintenance mode
 # ================================================================
 
-st.set_page_config(                                                          # Configures metadata for the app when NOT in maintenance.
-    page_title="RSVP • Daniela & Cristian",                                  # Consistent title for RSVP system.
-    layout="centered",                                                       # Centered layout for better focus on forms.
-    initial_sidebar_state="collapsed",                                       # Hides sidebar by default for clean UI.
-)                                                                            # End of page configuration.
+st.set_page_config(                                                          # Configura metadatos de la app cuando NO hay mantenimiento.
+    page_title="RSVP • Daniela & Cristian",                                  # Título consistente para el sistema RSVP.
+    layout="centered",                                                       # Layout centrado para foco en formularios.
+    initial_sidebar_state="collapsed",                                       # Sidebar colapsado para una UI limpia.
+)                                                                            # Fin de configuración de página.
 
-# --- Multipage routes (keep these names/locations in /pages) -----------------
-LOGIN_PAGE = "pages/0_Login.py"                                              # Route to Login screen (requires API and token).
-FORM_PAGE  = "pages/1_Formulario_RSVP.py"                                    # Route to protected RSVP form (requires valid token).
-REQUEST_ACCESS_PAGE = "pages/00_Solicitar_Acceso.py"                         # Route to the "Request Access" page (entry flow).
+# --- Multipage routes (mantén estos nombres/ubicación en /pages) -------------
+LOGIN_PAGE = "pages/0_Login.py"                                              # Ruta a la pantalla de Login (usa API y token).
+FORM_PAGE  = "pages/1_Formulario_RSVP.py"                                    # Ruta al formulario protegido (requiere token válido).
+REQUEST_ACCESS_PAGE = "pages/00_Solicitar_Acceso.py"                         # Ruta a la página "Solicitar Acceso" (flujo inicial).
 
 # ==============================================================================
-# ✅ Default language initialization logic
+# ✅ Lógica de inicialización del idioma por defecto
 # ------------------------------------------------------------------------------
-# Runs ONCE at session start:
-# 1) Reads language from URL (?lang=...).
-# 2) If absent, checks session state.
-# 3) Defaults to 'en' (English) if not found.
+# Se ejecuta UNA VEZ al inicio de la sesión del usuario.                      # Controla el idioma por URL o por defecto.
+# 1) Lee el idioma desde ?lang=...                                            # Prioriza el idioma indicado en la URL.
+# 2) Si no existe, usa el guardado en sesión.                                 # Reutiliza el idioma previo de la sesión.
+# 3) Si no hay ninguno, usa 'en' (Inglés).                                    # Fija un idioma por defecto coherente con tu sitio.
 # ------------------------------------------------------------------------------
 try:
-    query_lang = st.query_params.get("lang")                                 # Reads ?lang= from URL if available.
+    query_lang = st.query_params.get("lang")                                 # Obtiene el valor de ?lang= si está disponible.
 except Exception:
-    query_lang = None                                                        # If error, no language in URL.
+    query_lang = None                                                        # Si hay error, asume que no hay idioma en la URL.
 
-if "lang" not in st.session_state:                                           # Initializes only once per session.
-    if query_lang in ["en", "es", "ro"]:                                     # Validates allowed languages.
-        st.session_state["lang"] = query_lang                                # Uses the one from URL.
+if "lang" not in st.session_state:                                           # Solo inicializa si aún no hay idioma en la sesión.
+    if query_lang in ["en", "es", "ro"]:                                     # Valida los idiomas permitidos.
+        st.session_state["lang"] = query_lang                                # Usa el idioma de la URL si es válido.
     else:
-        st.session_state["lang"] = "en"                                      # Defaults to English.
+        st.session_state["lang"] = "en"                                      # Por defecto, inglés.
 # ==============================================================================
 
-# --- (Optional) Logout by query param -----------------------------------------
+# --- (Opcional) Logout por query param ----------------------------------------
 try:
-    if st.query_params.get("logout") in ("1", "true", "True"):               # If URL has ?logout=1/true → logs out.
-        st.session_state.pop("token", None)                                  # Removes JWT (logs out user).
-        st.session_state.pop("last_rsvp", None)                              # Clears last RSVP result.
-        st.query_params.clear()                                              # Clears query params to avoid loops.
+    if st.query_params.get("logout") in ("1", "true", "True"):               # Si la URL trae ?logout=1/true, interpretarlo como logout.
+        st.session_state.pop("token", None)                                  # Elimina el JWT de la sesión (cierra sesión).
+        st.session_state.pop("last_rsvp", None)                              # Limpia el último resultado de confirmación almacenado.
+        st.query_params.clear()                                              # Limpia los parámetros de la URL para evitar bucles.
 except Exception:
-    pass                                                                     # Safe fail: do nothing if unsupported version.
+    pass                                                                     # Si la versión de Streamlit no soporta query_params, no falla.
 
-# --- Destination decision -----------------------------------------------------
-target_page = FORM_PAGE if st.session_state.get("token") else REQUEST_ACCESS_PAGE  # If token → Form; else → Request Access.
+# --- Decisión de destino ------------------------------------------------------
+target_page = FORM_PAGE if st.session_state.get("token") else REQUEST_ACCESS_PAGE  # Con token → Formulario; sin token → Solicitar Acceso.
 
-# --- Navigation with error handling -------------------------------------------
+# --- Navegación con manejo de errores ----------------------------------------
 try:
-    st.switch_page(target_page)                                              # Redirects to appropriate page.
+    st.switch_page(target_page)                                              # Intenta redirigir a la página objetivo.
 except Exception:
-    st.error(f"Unable to redirect to '{target_page}'.")                      # Clear error message if redirection fails.
-    st.info("Make sure the file exists in the `pages/` folder with that name.")   # Helpful tip for developers.
-    st.link_button("Go to Access Page", REQUEST_ACCESS_PAGE)                 # Rescue button for users.
-    st.link_button("Go to RSVP Form", FORM_PAGE)                             # Another rescue option.
+    st.error(f"Unable to redirect to '{target_page}'.")                      # Muestra error claro si no se puede redirigir.
+    st.info("Make sure the file exists in the `pages/` folder with that name.")   # Pista para corregir rutas/archivos.
+    st.link_button("Go to Access Page", REQUEST_ACCESS_PAGE)                 # Botón de rescate hacia Solicitar Acceso.
+    st.link_button("Go to RSVP Form", FORM_PAGE)                             # Botón de rescate hacia el Formulario.
