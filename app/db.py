@@ -14,18 +14,40 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from loguru import logger
 
 # --- Lógica de URL de la Base de Datos ---
-DATABASE_URL_ENV = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
-if DATABASE_URL_ENV:
-    # Si la variable de entorno está definida (ej. en Railway), se usa directamente.
-    DATABASE_URL = DATABASE_URL_ENV
-else:
-    # Si no, se construye una ruta absoluta al archivo wedding.db en la raíz del proyecto.
-    # (Esta lógica es más robusta para ejecuciones locales).
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.abspath(os.path.join(current_dir, ".."))
-    db_path = os.path.join(project_root, "wedding.db")
-    DATABASE_URL = f"sqlite:///{db_path}"
+# #####################################################################################
+# ### INICIO DEL AJUSTE QUIRÚRGICO: Lógica de Arranque a Prueba de Fallos           ###
+# #####################################################################################
+# Esta sección asegura que la aplicación no arranque con SQLite en producción por error.
+
+# 1. Lee la variable para forzar un motor de BD específico (por defecto 'postgres').
+FORCE_DB = os.getenv("FORCE_DB", "postgres").strip().lower()
+
+# 2. Detecta si la variable de entorno es un placeholder de Railway sin resolver.
+if DATABASE_URL.startswith("${{") and DATABASE_URL.endswith("}}"):
+    logger.warning("DATABASE_URL parece un placeholder sin resolver: {}", DATABASE_URL)
+    DATABASE_URL = "" # Se trata como si la variable estuviera vacía.
+
+# 3. Si la URL está vacía, se aplica la política de seguridad.
+if not DATABASE_URL:
+    if FORCE_DB == "postgres":
+        # Si se exige PostgreSQL, se detiene el arranque para evitar usar una BD incorrecta.
+        raise RuntimeError(
+            "FATAL: DATABASE_URL no está disponible y FORCE_DB=postgres. "
+            "Se aborta para evitar un fallback accidental a SQLite en producción."
+        )
+    else:
+        # Si no se fuerza Postgres (ej. en local), se permite el fallback a SQLite.
+        logger.warning("DATABASE_URL está vacía. Usando fallback a SQLite local.")
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(current_dir, ".."))
+        db_path = os.path.join(project_root, "wedding.db")
+        DATABASE_URL = f"sqlite:///{db_path}"
+# #####################################################################################
+# ### FIN DEL AJUSTE QUIRÚRGICO                                                     ###
+# #####################################################################################
+
 
 # --- Creación del Engine con Lógica Condicional y Resiliencia ---
 engine = None
