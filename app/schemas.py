@@ -104,7 +104,7 @@ class CompanionIn(BaseModel):                                                   
         return v or None                                                                      # Devuelve None si quedó vacío.
 
 class CompanionOut(CompanionIn):                                                              # Modelo de salida para acompañantes (mismo shape que entrada).
-    pass                                                                                      # No añade campos extra (permite extender si se requiere).
+    model_config = ConfigDict(from_attributes=True)                                                                                    # No añade campos extra (permite extender si se requiere).
 
 # =================================================================================
 # 🔐 Login / Token / Recuperación
@@ -181,6 +181,8 @@ class RSVPUpdateRequest(BaseModel):                                             
     notes: Optional[str] = Field(default=None, max_length=500)                                # Notas opcionales, limitadas a 500 caracteres.
     needs_accommodation: bool = False                                                         # Bandera: necesita alojamiento.
     needs_transport: bool = False                                                             # Bandera: necesita transporte.
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     companions: List[CompanionIn] = Field(default_factory=list)                               # Lista de acompañantes (vacía por defecto).
 
     @model_validator(mode="after")                                                            # Validador post-parsing.

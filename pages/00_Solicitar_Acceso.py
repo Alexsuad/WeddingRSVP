@@ -102,7 +102,7 @@ elif submit:
     # Validaciones
     name_ok = len((full_name or "").strip()) >= 3
     phone_ok = bool(re.fullmatch(r"\d{4}", (phone_last4 or "").strip()))
-    email_ok = bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", (email or "").strip()))
+    email_ok = bool(re.fullmatch(r"[^@\s]+@[^@\s\.]+\.[a-zA-Z]{2,}", (email or "").strip()))
     consent_ok = bool(consent)
 
     def _msg_neutro() -> str:

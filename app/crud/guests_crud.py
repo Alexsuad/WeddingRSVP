@@ -39,10 +39,20 @@ def _norm_name(s: str) -> str:
     return txt.casefold()                                       # Aplica casefold (mejor que lower para i18n).
 
 def _name_matches_flexibly(input_name_norm: str, db_name_norm: str) -> bool:
-    """Fortalecido: Devuelve True si TODAS las palabras del input están en el nombre de la BD.""" # Docstring del helper de coincidencia de nombre.
-    input_tokens = set(input_name_norm.split())                 # Divide el nombre de entrada en un conjunto de palabras (tokens).
-    db_tokens = set(db_name_norm.split())                       # Divide el nombre de la BD en un conjunto de palabras.
-    return input_tokens.issubset(db_tokens)                     # Devuelve True solo si el conjunto de entrada es un subconjunto del de la BD.
+    """
+    Devuelve True si al menos una palabra significativa (más de 2 letras) del nombre
+    de entrada coincide con una del nombre en la BD.
+    """
+    # Ignora palabras muy cortas como 'y', 'de', 'a' para evitar falsos positivos
+    input_tokens = {token for token in input_name_norm.split() if len(token) > 2}
+    db_tokens = {token for token in db_name_norm.split() if len(token) > 2}
+
+    # Si después de filtrar no quedan palabras, es más seguro no dar un match
+    if not input_tokens or not db_tokens:
+        return False
+
+    # Devuelve True si hay al menos una palabra en común
+    return len(input_tokens.intersection(db_tokens)) > 0
 
 # ---------------------------------------------------------------------------------
 # 🔎 Helpers de búsqueda

@@ -179,9 +179,9 @@ def update_my_rsvp(                            # Endpoint: actualiza la confirma
     if len(payload.companions) > (current_guest.max_accomp or 0):  # Verifica que no supere el máximo permitido de acompañantes.                 # Regla de cupo.
         raise HTTPException(status_code=400, detail="Has superado el número máximo de acompañantes permitido.")  # Error claro.                # Lanza 400.
 
-    requires_menu = (current_guest.invite_type == InviteTypeEnum.full)  # El menú del titular solo aplica si invitación es FULL.                # Flag menú.
-    if requires_menu and not (payload.menu_choice and payload.menu_choice.strip()):  # Si requiere menú pero no se envió uno válido...           # Validación menú.
-        raise HTTPException(status_code=400, detail="Debes escoger un menú para el titular.")  # Error si falta menú.                           # Lanza 400.
+    #requires_menu = (current_guest.invite_type == InviteTypeEnum.full)  # El menú del titular solo aplica si invitación es FULL.                # Flag menú.
+    #if requires_menu and not (payload.menu_choice and payload.menu_choice.strip()):  # Si requiere menú pero no se envió uno válido...           # Validación menú.
+    #    raise HTTPException(status_code=400, detail="Debes escoger un menú para el titular.")  # Error si falta menú.                           # Lanza 400.
 
     # 👪 4) Calcular totales de adultos y niños.                                                                                                 # Paso 4: conteo.
     titular_adult = 1                                               # El titular cuenta como un adulto.                                            # Titular = 1 adulto.
@@ -189,14 +189,15 @@ def update_my_rsvp(                            # Endpoint: actualiza la confirma
     children = sum(1 for c in payload.companions if c.is_child)    # Niños = suma de acompañantes marcados como niño.                             # Calcula niños.
 
     # 📝 5) Persistir datos del titular.                                                                                                          # Paso 5: persistir titular.
-    current_guest.confirmed = True                                  # Marca confirmación como True.                                                # Confirma asistencia.
-    current_guest.confirmed_at = datetime.utcnow()                  # Sella tiempo de confirmación.                                                # Timestamp.
-    current_guest.menu_choice = (payload.menu_choice or None) if requires_menu else None  # Guarda menú si aplica; si no, None.                  # Guarda menú.
-    current_guest.allergies = (payload.allergies or None)           # Guarda alergias (o None si vacío).                                           # Guarda alergias.
-    current_guest.needs_accommodation = bool(payload.needs_accommodation)  # Guarda necesidad de alojamiento.                                     # Guarda alojamiento.
-    current_guest.needs_transport = bool(payload.needs_transport)          # Guarda necesidad de transporte.                                      # Guarda transporte.
-    # ✅ NUEVO: guardar notas del titular
+    current_guest.confirmed = True
+    current_guest.confirmed_at = datetime.utcnow()
+    current_guest.menu_choice = None
+    current_guest.allergies = (payload.allergies or None)
+    current_guest.needs_accommodation = bool(payload.needs_accommodation)
+    current_guest.needs_transport = bool(payload.needs_transport)
     current_guest.notes = (payload.notes or None)
+    current_guest.email = (payload.email or current_guest.email)
+    current_guest.phone = (payload.phone or current_guest.phone)
 
     # 🔁 6) Reemplazar la lista de acompañantes.                                                                                                  # Paso 6: companions.
     current_guest.companions.clear()                                # Limpia la lista existente para reemplazarla.                                 # Limpia lista.
@@ -206,7 +207,7 @@ def update_my_rsvp(                            # Endpoint: actualiza la confirma
                 guest_id=current_guest.id,                          # Relaciona el companion con el invitado actual.                               # FK guest_id.
                 name=c.name.strip(),                                # Guarda nombre del acompañante (sin espacios extra).                          # Nombre limpio.
                 is_child=bool(c.is_child),                          # Guarda si es niño/niña.                                                       # Flag niño.
-                menu_choice=(c.menu_choice or None) if requires_menu else None,  # Menú del acompañante si aplica; si no, None.                   # Menú acomp.
+                menu_choice= None,  # Menú del acompañante si aplica; si no, None.                   # Menú acomp.
                 allergies=(c.allergies or None),                    # Alergias del acompañante (o None si vacío).                                  # Alergias acomp.
             )
         )

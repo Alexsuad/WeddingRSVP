@@ -38,7 +38,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         # --- Solicitar Acceso ---
         "request.title": "🔑 Solicita tu acceso",
         "request.intro": "Para identificarte, indícanos tu nombre completo, los últimos 4 dígitos de tu teléfono y el email donde quieres recibir tu enlace.",
-        "request.full_name": "Nombre completo (como aparece en la invitación)",
+        "request.full_name": "Tu nombre completo",
         "request.phone_last4": "Últimos 4 dígitos de tu teléfono",
         "request.phone_last4_placeholder": "Ej.: 5678",
         "request.email": "Correo electrónico",
@@ -81,7 +81,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.contact_title": "Datos de contacto",
         "form.contact_caption": "Usaremos estos datos para enviarte la confirmación y recordatorios. 💌",
         "form.field_email": "Email",
-        "form.field_phone": "Teléfono (con código de país)",
+        "form.field_phone": "Teléfono (Ej: +573101234567)",
         "form.contact_required_one": "Por favor, proporciona al menos un email o un teléfono.",
         "form.contact_invalid_email": "El formato del email no es válido.",
         "form.contact_invalid_phone": "El teléfono debe incluir el código de país. Ej.: +573101234567",
@@ -110,6 +110,30 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         # --- Mensaje opcional ---
         "form.notes.expander_label": "📝 ¿Quieres dejarnos un mensaje opcional?",
         "form.notes.placeholder": "Ej.: Llegaremos un poco tarde, preferimos una mesa tranquila…",
+        
+        # --- Página de Confirmado ---
+        "ok.title": "¡Confirmación recibida!",
+        "ok.msg_yes": "¡Gracias por confirmar! Tu respuesta ha sido guardada.",
+        "ok.msg_no": "Hemos registrado que no podrás asistir. ¡Te echaremos de menos!",
+        "ok.summary": "Este es un resumen de tu confirmación:",
+        "ok.main_guest": "Invitado principal",
+        "ok.adults_children": "Adultos / Niños",
+        "ok.allergies": "Alergias (titular)",
+        "ok.companions": "Acompañantes",
+        "ok.alrg_item": "Alergias",
+        "ok.btn_edit": "✏️ Editar respuesta",
+        "ok.btn_resend_email": "Reenviar email",
+        "ok.btn_logout": "Cerrar sesión",
+        "ok.load_error": "No pudimos cargar el resumen de tu confirmación.",
+        "ok.sending": "Enviando...",
+        "ok.resent_ok": "¡Correo de confirmación reenviado!",
+        "ok.resent_fail": "No se pudo reenviar el correo.",
+
+        # --- Panel de Invitación (usado en Formulario y Confirmado) ---
+        "invite.panel_title": "Tu invitación",
+        "invite.scope.full": "Estás invitado/a a la **Ceremonia** y a la **Recepción**.",
+        "invite.scope.reception": "Estás invitado/a a la **Recepción**.",
+        "invite.times.hint": "Ceremonia {ceremony_time} · Recepție {reception_time}",
     },
 
     # ==================================================
@@ -139,7 +163,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         # --- Cere Accesul ---
         "request.title": "🔑 Cere accesul",
         "request.intro": "Pentru identificare, te rugăm să ne spui numele complet, ultimele 4 cifre ale telefonului și emailul unde vrei să primești linkul.",
-        "request.full_name": "Nume complet (așa cum apare pe invitație)",
+        "request.full_name": "Numele tău complet",
         "request.phone_last4": "Ultimele 4 cifre ale telefonului",
         "request.phone_last4_placeholder": "Ex.: 5678",
         "request.email": "Adresă de email",
@@ -182,7 +206,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.contact_title": "Date de contact",
         "form.contact_caption": "Vom folosi aceste date pentru confirmare și remindere. 💌",
         "form.field_email": "Email",
-        "form.field_phone": "Telefon (cu prefix internațional)",
+        "form.field_phone": "Telefon (Ex: +40722123456)",
         "form.contact_required_one": "Te rugăm să oferi cel puțin un email sau un telefon.",
         "form.contact_invalid_email": "Adresa de email nu pare validă.",
         "form.contact_invalid_phone": "Telefonul trebuie să includă prefixul internațional. Ex.: +40722123456",
@@ -211,6 +235,31 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         # --- Mesaj opțional ---
         "form.notes.expander_label": "📝 Vrei să ne lași un mesaj opțional?",
         "form.notes.placeholder": "Ex.: Venim mai târziu, preferăm o masă liniștită…",
+    
+    # --- Pagina de Confirmare ---
+        "ok.title": "Confirmare primită!",
+        "ok.msg_yes": "Îți mulțumim pentru confirmare! Răspunsul tău a fost salvat.",
+        "ok.msg_no": "Am înregistrat că nu vei putea participa. Ne va fi dor de tine!",
+        "ok.summary": "Iată un sumar al confirmării tale:",
+        "ok.main_guest": "Invitat principal",
+        "ok.adults_children": "Adulți / Copii",
+        "ok.allergies": "Alergii (titular)",
+        "ok.companions": "Însoțitori",
+        "ok.alrg_item": "Alergii",
+        "ok.btn_edit": "✏️ Editează răspunsul",
+        "ok.btn_resend_email": "Retrimite email",
+        "ok.btn_logout": "Deconectare",
+        "ok.load_error": "Nu am putut încărca sumarul confirmării.",
+        "ok.sending": "Se trimite...",
+        "ok.resent_ok": "Emailul de confirmare a fost retrimis!",
+        "ok.resent_fail": "Emailul nu a putut fi retrimis.",
+
+        # --- Panou Invitație (folosit în Formular și Confirmare) ---
+        "invite.panel_title": "Invitația ta",
+        "invite.scope.full": "Ești invitat(ă) la **Ceremonie** și la **Recepție**.",
+        "invite.scope.reception": "Ești invitat(ă) la **Recepție**.",
+        "invite.times.hint": "Ceremonie {ceremony_time} · Recepție {reception_time}",
+        
     },
 
     # ==================================================
@@ -240,7 +289,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         # --- Request Access ---
         "request.title": "🔑 Request access",
         "request.intro": "To identify you, please share your full name, the last 4 digits of your phone, and the email where you’d like to receive your access link.",
-        "request.full_name": "Full name (as on the invitation)",
+        "request.full_name": "Yourull name",
         "request.phone_last4": "Last 4 digits of your phone",
         "request.phone_last4_placeholder": "E.g., 5678",
         "request.email": "Email address",
@@ -283,7 +332,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.contact_title": "Contact details",
         "form.contact_caption": "We’ll use this information to send your confirmation and reminders. 💌",
         "form.field_email": "Email",
-        "form.field_phone": "Phone (with country code)",
+        "form.field_phone": "Phone (E.g. +447911123456)",
         "form.contact_required_one": "Please provide at least an email or a phone number.",
         "form.contact_invalid_email": "The email doesn’t look valid.",
         "form.contact_invalid_phone": "Phone must include the country code. E.g., +447911123456",
@@ -312,6 +361,30 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         # --- Optional note ---
         "form.notes.expander_label": "📝 Would you like to leave an optional message?",
         "form.notes.placeholder": "E.g., We might arrive a bit late, we’d love a quiet table…",
+        
+        # --- Confirmation Page ---
+        "ok.title": "Confirmation Received!",
+        "ok.msg_yes": "Thank you for confirming! Your response has been saved.",
+        "ok.msg_no": "We've noted that you won't be able to attend. We'll miss you!",
+        "ok.summary": "Here is a summary of your confirmation:",
+        "ok.main_guest": "Main Guest",
+        "ok.adults_children": "Adults / Children",
+        "ok.allergies": "Allergies (main guest)",
+        "ok.companions": "Companions",
+        "ok.alrg_item": "Allergies",
+        "ok.btn_edit": "✏️ Edit response",
+        "ok.btn_resend_email": "Resend email",
+        "ok.btn_logout": "Log out",
+        "ok.load_error": "We couldn't load your confirmation summary.",
+        "ok.sending": "Sending...",
+        "ok.resent_ok": "Confirmation email resent!",
+        "ok.resent_fail": "Could not resend the email.",
+
+        # --- Invitation Panel (used in Form & Confirmed) ---
+        "invite.panel_title": "Your Invitation",
+        "invite.scope.full": "You are invited to the **Ceremony** and the **Reception**.",
+        "invite.scope.reception": "You are invited to the **Reception**.",
+        "invite.times.hint": "Ceremony {ceremony_time} · Reception {reception_time}",
     },
 }
 

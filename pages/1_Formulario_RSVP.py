@@ -297,7 +297,7 @@ with col_cancel:
         # (no envía nada, no navega a “Confirmado”).
         for k in [k for k in st.session_state.keys() if k.startswith(("c_name_", "c_is_child_", "c_allergies_", "notes_yes"))]:
             st.session_state.pop(k, None)
-        st.experimental_set_query_params()  # limpia la URL
+        st.query_params.clear() # limpia la URL
         st.toast(t("form.select_option", lang))
         st.rerun()
 
