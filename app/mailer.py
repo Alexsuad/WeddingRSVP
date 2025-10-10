@@ -74,27 +74,29 @@ TEMPLATES_DIR = (Path(__file__).parent / "templates" / "emails").resolve()
 PUBLIC_LOGIN_URL = os.getenv("PUBLIC_LOGIN_URL", "").strip()
 
 # Valida configuración crítica solo si NO estamos en modo simulación.
-if not DRY_RUN:
-    provider_now = os.getenv("EMAIL_PROVIDER", "sendgrid").lower()
+if not DRY_RUN:                                                                       # Si se quiere envío real...
+    provider_now = os.getenv("EMAIL_PROVIDER", "sendgrid").lower()                    # Lee proveedor activo.
 
-    if provider_now == "brevo":
-        if not os.getenv("BREVO_API_KEY"):
-            raise RuntimeError("Falta BREVO_API_KEY para envíos reales con Brevo.")
-        if not FROM_EMAIL:
-            raise RuntimeError("Falta EMAIL_FROM para envíos reales con Brevo.")
-    
-    elif provider_now == "sendgrid":
+    if provider_now == "sendgrid":                                                    # Reglas para SendGrid.
         if not SENDGRID_API_KEY:
             raise RuntimeError("Falta SENDGRID_API_KEY para envíos reales con SendGrid.")
         if not FROM_EMAIL:
             raise RuntimeError("Falta EMAIL_FROM para envíos reales con SendGrid.")
 
-    elif provider_now == "gmail":
+    elif provider_now == "gmail":                                                     # Reglas para Gmail (SMTP).
         if not os.getenv("EMAIL_USER", "") or not os.getenv("EMAIL_PASS", ""):
-            raise RuntimeError("Faltan EMAIL_USER o EMAIL_PASS para envíos reales con Gmail.")
-        # Para Gmail, si FROM_EMAIL no está, se puede usar el propio USER como fallback
+            raise RuntimeError("Faltan EMAIL_USER o EMAIL_PASS para envíos reales con Gmail/SMTP.")
         if not FROM_EMAIL:
             FROM_EMAIL = os.getenv("EMAIL_USER", "")
+
+    elif provider_now == "brevo":                                                     # Reglas para Brevo (API HTTPS).
+        if not os.getenv("BREVO_API_KEY", ""):
+            raise RuntimeError("Falta BREVO_API_KEY para envíos reales con Brevo API.")
+        if not FROM_EMAIL:
+            raise RuntimeError("Falta EMAIL_FROM para envíos reales con Brevo API.")
+
+    else:
+        raise RuntimeError(f"EMAIL_PROVIDER desconocido: {provider_now}")
 
 # =================================================================================
 # 📢 Webhook de alertas (opcional)                                                     # Sección de webhook opcional.
@@ -425,74 +427,157 @@ def _send_html_via_gmail(to_email: str, subject: str, html_body: str, text_fallb
         return False                                                                  # Fallo.
 
 # =================================================================================
+# ✉️ Motores de envío internos (Brevo API)
+# =================================================================================
+def _send_html_via_brevo_api(to_email: str, subject: str, html_body: str, text_fallback: str = "", to_name: str = "") -> bool:
+    """Envía un correo HTML usando la API HTTPS de Brevo, con nombre del destinatario personalizado."""
+    
+    # -------------------------------------------------------------
+    # 1️⃣ Verifica si el sistema está en modo simulación (DRY_RUN)
+    # -------------------------------------------------------------
+    DRY = os.getenv("DRY_RUN", "1") == "1"                   # Si DRY_RUN=1 no se envía realmente el correo.
+    api_key = os.getenv("BREVO_API_KEY", "")                 # Clave API privada de Brevo.
+    from_email = os.getenv("EMAIL_FROM", "")                 # Dirección de envío (ya verificada en Brevo).
+    sender_name = os.getenv("EMAIL_SENDER_NAME", "RSVP")     # Nombre que aparece como remitente.
+
+    # -------------------------------------------------------------
+    # 2️⃣ Si es simulación (modo pruebas), solo imprime en logs
+    # -------------------------------------------------------------
+    if DRY:
+        logger.info(f"[DRY_RUN] (BrevoAPI) Simular envío a {to_email} | Asunto: {subject}")
+        return True                                          # Sale sin enviar.
+
+    # -------------------------------------------------------------
+    # 3️⃣ Validación de seguridad (no enviar si falta algo crítico)
+    # -------------------------------------------------------------
+    if not api_key or not from_email:
+        logger.error("Brevo API: falta BREVO_API_KEY o EMAIL_FROM.")
+        return False
+
+    # -------------------------------------------------------------
+    # 4️⃣ Construcción del payload (contenido del correo)
+    # -------------------------------------------------------------
+    payload = {
+        "sender": {"email": from_email, "name": sender_name},   # Quién envía el correo (remitente).
+        "to": [{"email": (to_email or '').strip(), "name": (to_name or '').strip()}],  # Se añade 'name' aquí.
+        "subject": subject,                                     # Asunto del correo.
+        "htmlContent": html_body,                               # Contenido HTML del correo.
+        "textContent": text_fallback or "Open with an HTML-capable client."  # Texto alternativo.
+    }
+
+    # -------------------------------------------------------------
+    # 5️⃣ Encabezados HTTP requeridos por la API de Brevo
+    # -------------------------------------------------------------
+    headers = {
+        "api-key": api_key,                      # Clave de autenticación API.
+        "Content-Type": "application/json",      # Indicamos que el cuerpo está en formato JSON.
+        "Accept": "application/json"             # Solicitamos respuesta en JSON.
+    }
+
+    # -------------------------------------------------------------
+    # 6️⃣ Envío del correo mediante petición POST
+    # -------------------------------------------------------------
+    try:
+        resp = requests.post(
+            "https://api.brevo.com/v3/smtp/email",  # Endpoint oficial de Brevo.
+            json=payload,                           # Cuerpo JSON con los datos del correo.
+            headers=headers,                        # Encabezados con clave y formato.
+            timeout=15                              # Tiempo máximo de espera en segundos.
+        )
+
+        # ---------------------------------------------------------
+        # 7️⃣ Verificación de respuesta HTTP
+        # ---------------------------------------------------------
+        if 200 <= resp.status_code < 300:
+            logger.info(f"Brevo API → enviado correctamente a {to_name} <{to_email}>")
+            return True
+        logger.error(f"Brevo API error -> status={resp.status_code} body={resp.text}")
+        return False
+
+    # -------------------------------------------------------------
+    # 8️⃣ Captura de errores inesperados
+    # -------------------------------------------------------------
+    except Exception as e:
+        logger.exception(f"Brevo API → excepción enviando a {to_email}: {e}")
+        return False
+
+
+# =================================================================================
 # ✉️ Envío de emails (HTML y texto) - ROUTER
 # =================================================================================
 def send_email_html(to_email: str, subject: str, html_body: str, text_fallback: str = "") -> bool:  # Firma pública HTML.
-    """Envía correo HTML, enrutando al proveedor configurado (SendGrid/Gmail)."""    # Docstring descriptivo.
-    provider = os.getenv("EMAIL_PROVIDER", "sendgrid").lower()                        # Lee proveedor activo.
+    """Envía correo HTML, enrutando al proveedor configurado (SendGrid/Gmail/Brevo)."""
+    # Lee el proveedor de email configurado en las variables de entorno.
+    provider = os.getenv("EMAIL_PROVIDER", "sendgrid").lower()
 
-    if provider == "gmail":                                                           # Rama Gmail…
-        return _send_html_via_gmail(to_email, subject, html_body, text_fallback)     # ✅ Pasa también el texto plano (mejora deliverability).
+    # Enruta al motor de envío SMTP (compatible con Gmail, Brevo SMTP, etc.).
+    if provider == "gmail":
+        return _send_html_via_gmail(to_email, subject, html_body, text_fallback)
 
-    # Rama SendGrid (legacy / fallback)                                               # Mantiene compatibilidad.
-    DRY_RUN_NOW = os.getenv("DRY_RUN", "1") == "1"                                    # Evalúa DRY_RUN en runtime.
-    FROM_EMAIL_NOW = os.getenv("EMAIL_FROM", "")                                      # Remitente actual.
-    API_KEY_NOW = os.getenv("SENDGRID_API_KEY", "")                                   # API Key de SendGrid.
-    API_KEY_EXISTS = bool(API_KEY_NOW)                                                # Bandera de existencia.
+    # Enruta al motor de envío por API de Brevo.
+    if provider == "brevo":
+        return _send_html_via_brevo_api(to_email, subject, html_body, text_fallback)
 
-    logger.debug(                                                                     # Log de diagnóstico de entorno.
-        "Mailer check (SendGrid) -> DRY_RUN={} | FROM={} | SG_KEY_SET={}",            # Plantilla del log.
-        DRY_RUN_NOW, FROM_EMAIL_NOW, API_KEY_EXISTS                                   # Valores actuales.
+    # ---- Fallback: SendGrid (legacy) ----
+    # Si no se especifica otro proveedor, se usa SendGrid como opción por defecto.
+    DRY_RUN_NOW = os.getenv("DRY_RUN", "1") == "1"
+    FROM_EMAIL_NOW = os.getenv("EMAIL_FROM", "")
+    API_KEY_NOW = os.getenv("SENDGRID_API_KEY", "")
+    API_KEY_EXISTS = bool(API_KEY_NOW)
+
+    logger.debug(
+        "Mailer check (SendGrid) -> DRY_RUN={} | FROM={} | SG_KEY_SET={}",
+        DRY_RUN_NOW, FROM_EMAIL_NOW, API_KEY_EXISTS
     )
-    if DRY_RUN_NOW:                                                                   # Si es simulación…
-        logger.info(f"[DRY_RUN] (HTML) Simular envío a {to_email} | Asunto: {subject}")  # Informa simulación.
-        return True                                                                   # Devuelve éxito simulado.
-    if not FROM_EMAIL_NOW or not API_KEY_EXISTS:                                      # Si falta config crítica…
-        logger.error("Config de mailer incompleta (HTML/SendGrid): FROM_EMAIL o SENDGRID_API_KEY ausentes.")  # Error claro.
-        send_alert_webhook("🚨 Mailer HTML config (SendGrid)", "Falta FROM_EMAIL o SENDGRID_API_KEY (modo real).")  # Alerta opcional.
-        return False                                                                  # Falla controlada.
+    if DRY_RUN_NOW:
+        logger.info(f"[DRY_RUN] (HTML) Simular envío a {to_email} | Asunto: {subject}")
+        return True
+    if not FROM_EMAIL_NOW or not API_KEY_EXISTS:
+        logger.error("Config de mailer incompleta (HTML/SendGrid): FROM_EMAIL o SENDGRID_API_KEY ausentes.")
+        send_alert_webhook("🚨 Mailer HTML config (SendGrid)", "Falta FROM_EMAIL o SENDGRID_API_KEY (modo real).")
+        return False
 
-    try:                                                                              # Import perezoso para no romper si no está instalado.
-        from sendgrid import SendGridAPIClient                                        # Cliente oficial de SendGrid.
-        from sendgrid.helpers.mail import Mail, From                                  # Construcción del mensaje.
-    except ImportError:                                                               # Si la librería no está…
-        logger.error("Librería 'sendgrid' no disponible. Cambia EMAIL_PROVIDER a 'gmail' o instala sendgrid.")  # Mensaje claro.
-        send_alert_webhook("🚨 Mailer HTML (SendGrid no instalado)", "Instala 'sendgrid' o usa EMAIL_PROVIDER=gmail.")  # Alerta.
-        return False                                                                  # Falla controlada.
+    try:
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail, From
+    except ImportError:
+        logger.error("Librería 'sendgrid' no disponible. Cambia EMAIL_PROVIDER a 'gmail'/'brevo' o instala sendgrid.")
+        send_alert_webhook("🚨 Mailer HTML (SendGrid no instalado)", "Instala 'sendgrid' o usa EMAIL_PROVIDER=gmail/brevo.")
+        return False
 
-    message = Mail(                                                                   # Construye el mensaje HTML.
-        from_email=From(FROM_EMAIL_NOW, EMAIL_SENDER_NAME),                           # Remitente con nombre.
-        to_emails=to_email, subject=subject,                                          # Destinatario y asunto.
-        plain_text_content=(text_fallback or "This email is best viewed in an HTML-compatible client."),  # Fallback texto.
-        html_content=html_body                                                        # Cuerpo HTML.
+    message = Mail(
+        from_email=From(FROM_EMAIL_NOW, EMAIL_SENDER_NAME),
+        to_emails=to_email, subject=subject,
+        plain_text_content=(text_fallback or "This email is best viewed in an HTML-compatible client."),
+        html_content=html_body
     )
-    try:                                                                              # Intenta envío con SendGrid.
-        sg = SendGridAPIClient(API_KEY_NOW)                                           # Crea cliente con API Key.
-        response = sg.send(message)                                                   # Envía y obtiene respuesta.
-        logger.info(                                                                  # Log de respuesta.
-            "SendGrid response: {} | X-Message-Id: {}",                               # Plantilla del log.
-            response.status_code, response.headers.get("X-Message-Id")                # Código y header opcional.
-        )
-        if 200 <= response.status_code < 300:                                         # Éxito si 2xx.
-            return True                                                               # Retorna True.
-        else:                                                                         # Si no 2xx…
-            logger.error(                                                             # Log de error con detalle.
-                "SendGrid error -> status={} | body={}",                              # Plantilla del log.
-                response.status_code, getattr(response, "body", None)                 # Código y cuerpo.
-            )
-            send_alert_webhook("🚨 Mailer HTML error (SendGrid)", f"No se pudo enviar a {to_email}. Código: {response.status_code}.")  # Alerta.
-            return False                                                              # Retorna fallo.
-    except Exception as e:                                                            # Excepciones en envío.
-        logger.exception(f"Excepción enviando HTML con SendGrid a {to_email}: {e}")   # Traza completa.
-        send_alert_webhook("🚨 Mailer HTML exception (SendGrid)", f"Excepción enviando a {to_email}. Error: {e}")  # Alerta.
-        return False                                                                  # Retorna fallo.
+    try:
+        sg = SendGridAPIClient(API_KEY_NOW)
+        response = sg.send(message)
+        logger.info("SendGrid response: {} | X-Message-Id: {}", response.status_code, response.headers.get("X-Message-Id"))
+        if 200 <= response.status_code < 300:
+            return True
+        logger.error("SendGrid error -> status={} | body={}", response.status_code, getattr(response, "body", None))
+        send_alert_webhook("🚨 Mailer HTML error (SendGrid)", f"No se pudo enviar a {to_email}. Código: {response.status_code}.")
+        return False
+    except Exception as e:
+        logger.exception(f"Excepción enviando HTML con SendGrid a {to_email}: {e}")
+        send_alert_webhook("🚨 Mailer HTML exception (SendGrid)", f"Excepción enviando a {to_email}. Error: {e}")
+        return False
 
 def send_email(to_email: str, subject: str, body: str) -> bool:                       # Firma pública TXT.
-    """Envía correo de texto plano, enrutando al proveedor configurado (SendGrid/Gmail)."""  # Docstring.
+    """Envía correo de texto plano, enrutando al proveedor configurado (SendGrid/Gmail/Brevo)."""
     provider = os.getenv("EMAIL_PROVIDER", "sendgrid").lower()                         # Lee proveedor activo.
 
     if provider == "gmail":                                                            # Rama Gmail…
         return _send_plain_via_gmail(to_email, subject, body)                         # Usa motor SMTP Gmail.
+
+    # Añade el enrutamiento para Brevo API para correos de texto plano.
+    if provider == "brevo":
+        # Brevo transaccional (API) prefiere HTML. Se crea un HTML mínimo a partir del texto.
+        # El texto original se envía como 'textContent' para clientes sin HTML.
+        html_min = f"<pre style='font-family:monospace'>{html.escape(body)}</pre>"
+        return _send_html_via_brevo_api(to_email, subject, html_min, text_fallback=body)
 
     # Rama SendGrid (legacy / fallback)                                                # Mantiene compatibilidad.
     DRY_RUN_NOW = os.getenv("DRY_RUN", "1") == "1"                                     # Evalúa DRY_RUN en runtime.
@@ -533,265 +618,4 @@ def send_email(to_email: str, subject: str, body: str) -> bool:                 
             "Error al enviar a {}. Código: {}. Cuerpo: {}",                            # Plantilla del log.
             to_email, response.status_code, getattr(response, "body", None)            # Destino, código y cuerpo si existe.
         )
-        send_alert_webhook("🚨 Mailer error (SendGrid)", f"No se pudo enviar a {to_email}. Código: {response.status_code}. Asunto: {subject}")  # Alerta.
-        return False                                                                    # Retorna fallo.
-    except Exception as e:                                                             # Captura excepciones del envío.
-        logger.error(f"Excepción enviando con SendGrid a {to_email}: {e}")            # Loguea el error.
-        send_alert_webhook("🚨 Mailer exception (SendGrid)", f"Excepción enviando a {to_email}. Asunto: {subject}. Error: {e}")  # Alerta.
-        return False                                                                   # Retorna fallo.
-
-# =================================================================================
-# 🧩 Helpers de alto nivel (API simple para el resto del backend)                      # Funciones de alto nivel.
-# =================================================================================
-def send_rsvp_reminder_email(to_email: str, guest_name: str, invited_to_ceremony: bool, language: str | Enum, deadline_dt: datetime) -> bool:
-    """Envía recordatorio en texto plano (i18n) con fecha límite y CTA opcional."""   # Docstring.
-    lang_value = language.value if isinstance(language, Enum) else (language or "en") # Normaliza entrada Enum/str.
-    lang_map = TEMPLATES.get(lang_value) or TEMPLATES.get("en", {})                   # Obtiene bundle o EN.
-    if not lang_map:                                                                  # Si ni EN existe…
-        logger.error("TEMPLATES no contiene definiciones mínimas para 'en'.")         # Log crítico de config.
-        return False                                                                  # Abortamos.
-    safe_lang = lang_value if lang_value in SUPPORTED_LANGS else "en"                 # Asegura idioma soportado.
-    deadline_str = format_deadline(deadline_dt, safe_lang)                            # Formatea fecha límite.
-    cta_line = lang_map.get("cta", "👉 Open: {url}").format(url=RSVP_URL) if RSVP_URL else ""  # CTA si hay RSVP_URL.
-    key = "reminder_both" if invited_to_ceremony else "reminder_reception"            # Selección de plantilla.
-    body = lang_map.get(key, "Please confirm your attendance.\n{cta}").format(        # Rellena plantilla.
-        name=guest_name, deadline=deadline_str, cta=cta_line                          # Variables nombradas.
-    )                                                                                 # Cierre format.
-    subject = SUBJECTS["reminder"].get(lang_value, SUBJECTS["reminder"]["en"])        # Asunto i18n.
-    return send_email(to_email=to_email, subject=subject, body=body)                  # Envío texto plano.
-
-def send_recovery_email(to_email: str, guest_name: str, guest_code: str, language: str | Enum) -> bool:
-    """Envía correo de recuperación de código de invitado en texto plano (i18n)."""   # Docstring.
-    lang_value = language.value if isinstance(language, Enum) else (language or "en") # Normaliza idioma.
-    lang_map = TEMPLATES.get(lang_value) or TEMPLATES.get("en", {})                   # Obtiene bundle o EN.
-    if not lang_map:                                                                  # Validación mínima.
-        logger.error("TEMPLATES no contiene definiciones mínimas para 'en'.")         # Log crítico.
-        return False                                                                  # Abortamos.
-    cta_line = lang_map.get("cta", "👉 Open: {url}").format(url=RSVP_URL) if RSVP_URL else ""  # CTA opcional.
-    body = lang_map.get("recovery", "Your guest code is: {guest_code}\n{cta}").format( # Rellena plantilla.
-        name=guest_name, guest_code=guest_code, cta=cta_line                          # Variables.
-    )                                                                                 # Cierre format.
-    subject = SUBJECTS["recovery"].get(lang_value, SUBJECTS["recovery"]["en"])        # Asunto i18n.
-    return send_email(to_email=to_email, subject=subject, body=body)                  # Envío texto plano.
-
-def send_magic_link_email(to_email: str, language: str | Enum, magic_url: str) -> bool:
-    """Envía el correo de Magic Link usando la plantilla HTML (i18n) con logs y fallback i18n."""  # Docstring.
-    lang_value = language.value if isinstance(language, Enum) else (language or "en") # Normaliza idioma.
-    lang_code = lang_value if lang_value in SUPPORTED_LANGS else "en"                  # Asegura idioma compatible.
-    logger.info(f"Preparando envío de Magic Link -> to={to_email} lang={lang_code}")   # Log útil de idioma final.
-    html_out = _build_email_html(lang_code, magic_url)                                 # Construye HTML con CTA.
-    subject = SUBJECTS["magic_link"].get(lang_code, SUBJECTS["magic_link"]["en"])      # Asunto i18n.
-    text_fallbacks = {                                                                 # Fallback de texto por idioma.
-        "es": f"Abre este enlace para confirmar tu asistencia: {magic_url}",           # ES.
-        "ro": f"Deschide acest link pentru a-ți confirma prezența: {magic_url}",       # RO.
-        "en": f"Open this link to confirm your attendance: {magic_url}",               # EN.
-    }                                                                                  # Fin mapa de fallbacks.
-    text_fallback = text_fallbacks.get(lang_code, text_fallbacks["en"])                # Selecciona fallback final.
-    return send_email_html(                                                            # Envía HTML con fallback.
-        to_email=to_email,
-        subject=subject,
-        html_body=html_out,
-        text_fallback=text_fallback
-    )                                                                                  # Fin de llamada.
-
-def send_guest_code_email(to_email: str, guest_name: str, guest_code: str, language: str | Enum) -> bool:
-    """Envía un correo HTML minimalista con el código de invitación (i18n + CTA opcional a Login)."""  # Docstring.
-    lang_value = language.value if isinstance(language, Enum) else (language or "en") # Normaliza idioma.
-    lang_code = lang_value if lang_value in SUPPORTED_LANGS else "en"                  # Asegura idioma soportado.
-    logger.info(f"Preparando envío de Guest Code -> to={to_email} lang={lang_code}")   # Log informativo.
-
-    subject_map = {                                                                    # Asuntos por idioma.
-        "es": "Tu código de invitación • Boda Daniela & Cristian",                    # ES.
-        "en": "Your invitation code • Daniela & Cristian Wedding",                    # EN.
-        "ro": "Codul tău de invitație • Nunta Daniela & Cristian",                    # RO.
-    }                                                                                  # Cierre mapa.
-    subject = subject_map.get(lang_code, subject_map["en"])                            # Selección del asunto.
-
-    greet = "Hola" if lang_code == "es" else ("Bună" if lang_code == "ro" else "Hi")  # Saludo por idioma.
-    instr = (                                                                          # Instrucción por idioma.
-        "Usa este código en la página de Iniciar sesión."
-        if lang_code == "es" else
-        ("Folosește acest cod pe pagina de autentificare." if lang_code == "ro" else "Use this code on the login page.")
-    )                                                                                  # Cierre instrucción.
-    btn_label = "Iniciar sesión" if lang_code == "es" else ("Conectare" if lang_code == "ro" else "Log in")  # Texto botón.
-
-    cta_html = ""                                                                      # CTA opcional (Login).
-    if PUBLIC_LOGIN_URL:                                                               # Si hay URL pública de Login…
-        cta_html = (                                                                   # Construye botón accesible.
-            "<p style='margin-top:16px;'>"
-            f"<a href='{PUBLIC_LOGIN_URL}' "
-            "style='display:inline-block;padding:10px 16px;border-radius:8px;"
-            "background:#6D28D9;color:#fff;text-decoration:none;font-weight:600;'"
-            f">{btn_label}</a></p>"
-        )                                                                              # Fin CTA.
-
-    html_body = (                                                                      # Ensambla HTML final.
-        "<div style='font-family:Inter,Arial,sans-serif;line-height:1.6'>"
-        f"<h2>{subject}</h2>"
-        f"<p>{greet} {html.escape(guest_name)},</p>"
-        f"<p>{'Tu código de invitación es' if lang_code=='es' else ('Codul tău de invitație este' if lang_code=='ro' else 'Your invitation code is')}: "
-        f"<strong style='font-size:18px;letter-spacing:1px'>{guest_code}</strong></p>"
-        f"<p>{instr}</p>"
-        f"{cta_html}"
-        "</div>"
-    )                                                                                  # Cierra HTML.
-
-    if lang_code == "es":                                                              # Fallback de texto ES.
-        text_fallback = f"Hola {guest_name},\n\nTu código de invitación es: {guest_code}\n\n{instr}"
-    elif lang_code == "ro":                                                            # Fallback de texto RO.
-        text_fallback = f"Bună {guest_name},\n\nCodul tău de invitație este: {guest_code}\n\n{instr}"
-    else:                                                                              # Fallback de texto EN.
-        text_fallback = f"Hi {guest_name},\n\nYour invitation code is: {guest_code}\n\n{instr}"
-
-    return send_email_html(                                                            # Envía usando helper HTML+texto.
-        to_email=to_email,
-        subject=subject,
-        html_body=html_body,
-        text_fallback=text_fallback
-    )                                                                                  # Devuelve True/False.
-
-def send_confirmation_email(to_email: str, language: str | Enum, summary: dict) -> bool:
-    """Envía correo de confirmación de RSVP en HTML con resumen (i18n, seguro contra XSS)."""  # Docstring.
-    lang_value = language.value if isinstance(language, Enum) else (language or "en") # Normaliza idioma (Enum o str).
-    lang_code = lang_value if lang_value in SUPPORTED_LANGS else "en"                  # Garantiza idioma.
-
-    subject = SUBJECTS["confirmation"].get(lang_code, SUBJECTS["confirmation"]["en"])  # Asunto i18n.
-
-    guest_name = html.escape(summary.get("guest_name", ""))                            # Escapa nombre (XSS-safe).
-    invite_scope = summary.get("invite_scope", "reception-only")                       # Alcance de invitación.
-    attending = summary.get("attending", None)                                         # Asistencia (True/False/None).
-    companions = summary.get("companions", [])                                         # Lista de acompañantes.
-    allergies = html.escape(summary.get("allergies", "")) if summary.get("allergies") else ""  # Alergias.
-    notes = html.escape(summary.get("notes", "")) if summary.get("notes") else ""      # Notas.
-    event_date = html.escape(str(summary.get("event_date", "")))                       # Fecha evento (string).
-    headcount = html.escape(str(summary.get("headcount", "")))                         # Número asistentes (string).
-    menu_choice = html.escape(str(summary.get("menu_choice", "")))                     # Menú (string).
-
-    scope_value = {                                                                    # Traducciones del alcance.
-        "ceremony+reception": {"es":"Ceremonia + Recepción","en":"Ceremony + Reception","ro":"Ceremonie + Recepție"},
-        "reception-only": {"es":"Solo Recepción","en":"Reception only","ro":"Doar Recepție"},
-    }                                                                                  # Fin mapa.
-    att_map = {                                                                        # Traducciones de asistencia.
-        True:  {"es":"Asistencia: Sí","en":"Attending: Yes","ro":"Participare: Da"},
-        False: {"es":"Asistencia: No","en":"Attending: No","ro":"Participare: Nu"},
-        None:  {"es":"Asistencia: —","en":"Attending: —","ro":"Participare: —"},
-    }                                                                                  # Fin mapa.
-
-    greet = "Hola" if lang_code == "es" else ("Bună" if lang_code == "ro" else "Hi")  # Saludo por idioma.
-    html_parts = []                                                                     # Acumula líneas HTML.
-    html_parts.append("<div style='font-family:Inter,Arial,sans-serif;line-height:1.6'>")  # Contenedor principal.
-    html_parts.append(f"<h2>{subject}</h2>")                                            # Título con asunto.
-    html_parts.append(f"<p>{greet} {guest_name},</p>")                                  # Saludo.
-    html_parts.append(                                                                  # Línea de invitación.
-        f"<p>{ {'es':'Invitación: ', 'en':'Invitation: ', 'ro':'Invitație: '}.get(lang_code,'Invitation: ') }"
-        f"{scope_value.get(invite_scope, scope_value['reception-only']).get(lang_code)}</p>"
-    )                                                                                   # Cierre línea.
-    html_parts.append(f"<p>{att_map.get(attending, att_map[None]).get(lang_code)}</p>") # Asistencia.
-    html_parts.append(f"<p><strong>{'Fecha del evento' if lang_code=='es' else ('Data evenimentului' if lang_code=='ro' else 'Event date')}:</strong> {event_date}</p>" if event_date else "")  # Fecha.
-    html_parts.append(f"<p><strong>{'Invitados' if lang_code=='es' else ('Invitați' if lang_code=='ro' else 'Guests')}:</strong> {headcount}</p>" if headcount else "")  # Headcount.
-    html_parts.append(f"<p><strong>{'Menú' if lang_code=='es' else ('Meniu' if lang_code=='ro' else 'Menu')}:</strong> {menu_choice}</p>" if menu_choice else "")  # Menú.
-
-    if companions:                                                                      # Si hay acompañantes…
-        html_parts.append(
-            f"<h3>👥 { 'Acompañantes' if lang_code=='es' else ('Însoțitori' if lang_code=='ro' else 'Companions') }</h3>"
-        )                                                                                # Título de sección.
-        html_parts.append("<ul>")                                                        # Lista HTML.
-        for c in companions:                                                             # Itera acompañantes.
-            label = html.escape(c.get("label",""))                                       # Escapa etiqueta.
-            name = html.escape(c.get("name",""))                                         # Escapa nombre.
-            allergens = html.escape(c.get("allergens","")) if c.get("allergens") else "" # Escapa alérgenos.
-            html_parts.append(                                                           # Ítem de lista.
-                f"<li><strong>{name}</strong> — {label} — "
-                f"{('Alergias:' if lang_code=='es' else ('Alergii:' if lang_code=='ro' else 'Allergies:'))} "
-                f"{allergens or '—'}</li>"
-            )                                                                            # Cierre ítem.
-        html_parts.append("</ul>")                                                       # Cierra lista.
-
-    if allergies:                                                                        # Si hay alergias…
-        html_parts.append(                                                               # Línea de alergias.
-            f"<p>{('Alergias' if lang_code=='es' else ('Alergii' if lang_code=='ro' else 'Allergies'))}: {allergies}</p>"
-        )                                                                                # Cierre línea.
-
-    if notes:                                                                            # Si hay notas…
-        html_parts.append(                                                               # Línea de notas.
-            f"<p>{('Notas' if lang_code=='es' else ('Note' if lang_code=='ro' else 'Notes'))}: {notes}</p>"
-        )                                                                                # Cierre línea.
-
-    html_parts.append("</div>")                                                          # Cierra contenedor HTML.
-    html_body = "".join(html_parts)                                                      # Une HTML final.
-
-    companions_text = ""                                                                 # Texto de acompañantes (fallback).
-    if companions:                                                                       # Si hay lista…
-        companions_text = "\n".join(                                                     # Construye items en texto plano.
-            f"- {html.escape(c.get('name',''))} ({html.escape(c.get('label',''))}) — "
-            f"{('Alergias: ' if lang_code=='es' else ('Alergii: ' if lang_code=='ro' else 'Allergies: '))}"
-            f"{html.escape(c.get('allergens','')) or '—'}"
-            for c in companions
-        )                                                                                # Cierre join.
-
-    tf = []                                                                              # Partes de texto plano.
-    tf.append(f"{greet} {guest_name},")                                                 # Saludo.
-    tf.append(
-        "¡Gracias por confirmar tu asistencia!" if lang_code=="es"
-        else ("Îți mulțumim că ai confirmat prezența!" if lang_code=="ro" else "Thank you for confirming your attendance!")
-    )                                                                                    # Mensaje de agradecimiento.
-    tf.append(
-        f"{'Invitación' if lang_code=='es' else ('Invitație' if lang_code=='ro' else 'Invitation')}: "
-        f"{scope_value.get(invite_scope, scope_value['reception-only']).get(lang_code)}"
-    )                                                                                    # Línea de invitación.
-    tf.append(att_map.get(attending, att_map[None]).get(lang_code))                      # Línea de asistencia.
-    if event_date:                                                                       # Fecha si existe…
-        tf.append(
-            f"{'Fecha del evento: ' if lang_code=='es' else ('Data evenimentului: ' if lang_code=='ro' else 'Event date: ')}{event_date}"
-        )                                                                                # Fecha.
-    if headcount:                                                                        # Headcount si existe…
-        tf.append(
-            f"{'Invitados: ' if lang_code=='es' else ('Invitați' if lang_code=='ro' else 'Guests: ')}{headcount}"
-        )                                                                                # Headcount.
-    if menu_choice:                                                                      # Menú si existe…
-        tf.append(
-            f"{'Menú: ' if lang_code=='es' else ('Meniu: ' if lang_code=='ro' else 'Menu: ')}{menu_choice}"
-        )                                                                                # Menú.
-    if companions_text:                                                                  # Lista de acompañantes si existe…
-        tf.append(
-            ('Acompañantes:\n' if lang_code=='es' else ('Însoțitori:\n' if lang_code=='ro' else 'Companions:\n')) + companions_text
-        )                                                                                # Agrega la lista.
-    if allergies:                                                                        # Alergias si existe…
-        tf.append(
-            f"{'Alergias: ' if lang_code=='es' else ('Alergii: ' if lang_code=='ro' else 'Allergies: ')}{allergies}"
-        )                                                                                # Alergias.
-    if notes:                                                                            # Notas si existe…
-        tf.append(
-            f"{'Notas: ' if lang_code=='es' else ('Note: ' if lang_code=='ro' else 'Notes: ')}{notes}"
-        )                                                                                # Notas.
-    tf.append(
-        "Te iremos informando con más detalles conforme se acerque la fecha." if lang_code=='es'
-        else ("Te vom ține la curent cu mai multe detalii pe măsură ce se apropie data." if lang_code=='ro'
-              else "We’ll keep you updated with more details as the date approaches.")
-    )                                                                                    # Mensaje final.
-    text_fallback = "\n".join(tf)                                                        # Une el texto plano final.
-
-    return send_email_html(                                                              # Envío HTML + fallback.
-        to_email=to_email,
-        subject=subject,
-        html_body=html_body,
-        text_fallback=text_fallback
-    )                                                                                    # Retorna True/False.
-
-def send_rsvp_reminder_email_html(to_email: str, guest_name: str, invited_to_ceremony: bool, language: str | Enum, deadline_dt: datetime) -> bool:
-    """(Opcional) Envía un recordatorio usando la plantilla HTML (i18n)."""            # Docstring.
-    lang_value = language.value if isinstance(language, Enum) else (language or "en")  # Normaliza idioma.
-    lang_code = lang_value if lang_value in SUPPORTED_LANGS else "en"                  # Asegura idioma soportado.
-    cta_url = RSVP_URL or "#"                                                          # Usa RSVP_URL o '#'.
-    html_out = _build_email_html(lang_code, cta_url)                                   # Construye HTML base.
-    deadline_str = format_deadline(deadline_dt, lang_code)                             # Formatea fecha límite.
-    html_out = html_out.replace("</p>", f"<br/><strong>{deadline_str}</strong></p>", 1) # Inserta deadline visible.
-    subject = SUBJECTS["reminder"].get(lang_code, SUBJECTS["reminder"]["en"])          # Asunto i18n.
-    return send_email_html(to_email=to_email, subject=subject, html_body=html_out)     # Envío HTML.
-
-# =================================================================================
-# 🔁 Compatibilidad retro: alias con firma antigua                                     # Mantiene routers viejos funcionando.
-# =================================================================================
-def send_magic_link(email: str, url: str, lang: str = "en") -> bool:                   # Wrapper retrocompatible.
-    """Wrapper retrocompatible: firma antigua → nueva función HTML."""                 # Docstring.
-    return send_magic_link_email(to_email=email, language=lang, magic_url=url)         # Redirige al helper moderno.
+        send_alert_webhook("🚨 Mailer error (SendGrid)", f"No se pudo enviar a {to_email}. Código: {response.status_code}. Asunto: {subject}")  #
