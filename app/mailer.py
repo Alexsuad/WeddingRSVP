@@ -22,6 +22,42 @@ import smtplib                                                                  
 from email.mime.text import MIMEText                                                   # Construcción de cuerpo de texto/HTML.
 from email.mime.multipart import MIMEMultipart                                         # Contenedor de mensaje (headers + partes).
 
+
+import socket                                      # importa socket para resolver DNS y controlar familia IPv4
+from ssl import create_default_context             # importa helper para crear un contexto TLS seguro
+
+def _smtp_connect_ipv4(host: str, port: int, timeout: float) -> smtplib.SMTP:
+    """
+    Crea una conexión SMTP forzando IPv4 y soporta 587 (STARTTLS) y 465 (SMTPS).
+    Conecta explícitamente a la IP v4 resuelta para evitar IPv6.
+    """
+    # Resuelve SOLO IPv4
+    addrinfo = socket.getaddrinfo(
+        host,
+        port,
+        socket.AF_INET,          # fuerza familia IPv4
+        socket.SOCK_STREAM
+    )
+    ipv4_ip = addrinfo[0][4][0]  # toma la IP v4 literal (p.ej. '74.125.206.108')
+
+    if port == 465:
+        # TLS directo
+        context = create_default_context()
+        # Conecta ya a la IP v4 (no al hostname)
+        server = smtplib.SMTP_SSL(
+            host=ipv4_ip,
+            port=port,
+            timeout=timeout,
+            context=context
+        )
+        return server
+
+    # STARTTLS (587)
+    server = smtplib.SMTP(timeout=timeout)
+    # Forzamos conexión a la IP v4 (evita una nueva resolución que podría ir a IPv6)
+    server.connect(ipv4_ip, port)
+    return server
+
 # =================================================================================
 # ✅ Configuración unificada al inicio del archivo.                                     # Sección de configuración.
 # ---------------------------------------------------------------------------------
@@ -318,11 +354,12 @@ def _send_plain_via_gmail(to_email: str, subject: str, body: str) -> bool:      
             msg["Reply-To"] = os.getenv("EMAIL_REPLY_TO")                             # Añade cabecera Reply-To.
         msg["Subject"] = subject                                                      # Setea el asunto.
         msg.attach(MIMEText(body, "plain", "utf-8"))                                  # Adjunta cuerpo de texto UTF-8.
-
-        server = smtplib.SMTP(host, port)                                             # Abre conexión SMTP hacia Gmail.
-        server.ehlo()                                                                 # Saludo EHLO inicial.
-        server.starttls()                                                             # Eleva a canal TLS cifrado.
-        server.ehlo()                                                                 # EHLO posterior por buenas prácticas.
+        timeout = float(os.getenv("SMTP_TIMEOUT", "30"))   # timeout configurable (30s por defecto)
+        server = _smtp_connect_ipv4(host, port, timeout)   # crea conexión SMTP forzando IPv4 (evita IPv6)
+        if port == 587:                                    # si estamos en STARTTLS (puerto 587)
+            server.ehlo()                                  # saludo EHLO inicial
+            server.starttls(context=create_default_context())  # eleva a TLS con contexto seguro
+            server.ehlo()                                  # EHLO posterior según buenas prácticas
         server.login(user, pwd)                                                       # Autentica con usuario/contraseña de aplicación.
         server.sendmail(from_addr, [msg["To"]], msg.as_string())                      # Envía el mensaje crudo.
         server.quit()                                                                 # Cierra la conexión SMTP.
@@ -363,10 +400,12 @@ def _send_html_via_gmail(to_email: str, subject: str, html_body: str, text_fallb
             msg.attach(MIMEText(text_fallback, "plain", "utf-8"))                     # Adjunta parte de texto plano primero (mejor deliverability).
         msg.attach(MIMEText(html_body, "html", "utf-8"))                              # Adjunta el cuerpo HTML como segunda parte.
 
-        server = smtplib.SMTP(host, port)                                             # Crea la conexión SMTP.
-        server.ehlo()                                                                 # EHLO inicial.
-        server.starttls()                                                             # Activa TLS.
-        server.ehlo()                                                                 # EHLO posterior.
+        timeout = float(os.getenv("SMTP_TIMEOUT", "30"))                                # fija un timeout razonable (30s)
+        server = _smtp_connect_ipv4(host, port, timeout)                                # abre conexión forzando IPv4
+        if port == 587:                                                                    # si usamos STARTTLS (587)
+            server.ehlo()                                                               # EHLO inicial
+            server.starttls(context=create_default_context())                           # activa TLS con contexto seguro
+            server.ehlo()                                                               # EHLO posterior
         server.login(user, pwd)                                                       # Inicia sesión.
         server.sendmail(from_addr, [msg["To"]], msg.as_string())                      # Envía el correo.
         server.quit()                                                                 # Cierra conexión.
