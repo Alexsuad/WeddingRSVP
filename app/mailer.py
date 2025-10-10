@@ -59,33 +59,42 @@ def _smtp_connect_ipv4(host: str, port: int, timeout: float) -> smtplib.SMTP:
     return server
 
 # =================================================================================
-# ✅ Configuración unificada al inicio del archivo.                                     # Sección de configuración.
+# ✅ Configuración unificada al inicio del archivo.
 # ---------------------------------------------------------------------------------
-# Se centraliza la lectura de variables de entorno y se valida credenciales            # Razón del bloque.
-# solo si DRY_RUN=0 (evita fallos en dev/CI).                                          # Comportamiento en pruebas/producción.
+# Se centraliza la lectura de variables de entorno y se valida credenciales
+# solo si DRY_RUN=0 (evita fallos en dev/CI).
 # =================================================================================
-SUPPORTED_LANGS = ("en", "es", "ro")                                                  # Lista centralizada de idiomas soportados.
-DRY_RUN = os.getenv("DRY_RUN", "1") == "1"                                            # Activa simulación por defecto (seguro en dev/CI).
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")                                  # Clave de SendGrid (puede faltar si usas Gmail).
-FROM_EMAIL = os.getenv("EMAIL_FROM", "")                                              # Remitente por defecto (SendGrid lo requiere).
-RSVP_URL = os.getenv("RSVP_URL", "")                                                  # URL pública del formulario RSVP (opcional en correos).
-EMAIL_SENDER_NAME = os.getenv("EMAIL_SENDER_NAME", "Daniela & Cristian")              # Nombre visible del remitente.
-TEMPLATES_DIR = (Path(__file__).parent / "templates" / "emails").resolve()            # Ruta a plantillas relativa a este archivo.
-PUBLIC_LOGIN_URL = os.getenv("PUBLIC_LOGIN_URL", "").strip()                          # URL pública de Login para CTA opcional.
+SUPPORTED_LANGS = ("en", "es", "ro")
+DRY_RUN = os.getenv("DRY_RUN", "1") == "1"
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
+FROM_EMAIL = os.getenv("EMAIL_FROM", "")
+RSVP_URL = os.getenv("RSVP_URL", "")
+EMAIL_SENDER_NAME = os.getenv("EMAIL_SENDER_NAME", "Daniela & Cristian")
+TEMPLATES_DIR = (Path(__file__).parent / "templates" / "emails").resolve()
+PUBLIC_LOGIN_URL = os.getenv("PUBLIC_LOGIN_URL", "").strip()
 
-# Valida configuración crítica solo si NO estamos en modo simulación.                 # Validación condicional.
-if not DRY_RUN:                                                                       # Si se quiere envío real...
-    provider_now = os.getenv("EMAIL_PROVIDER", "sendgrid").lower()                    # Lee proveedor activo ('gmail' o 'sendgrid').
-    if provider_now == "sendgrid":                                                    # Reglas para SendGrid.
-        if not SENDGRID_API_KEY:                                                      # Exige API Key de SendGrid.
-            raise RuntimeError("Falta SENDGRID_API_KEY para envíos reales con SendGrid.")  # Falla temprano si no hay API Key.
-        if not FROM_EMAIL:                                                            # Exige FROM_EMAIL para SendGrid.
-            raise RuntimeError("Falta EMAIL_FROM para envíos reales con SendGrid.")  # Falla temprano si no hay remitente.
-    else:                                                                             # Reglas para Gmail.
-        if not os.getenv("EMAIL_USER", "") or not os.getenv("EMAIL_PASS", ""):        # Gmail necesita credenciales completas.
-            raise RuntimeError("Faltan EMAIL_USER o EMAIL_PASS para envíos reales con Gmail.")  # Falla si faltan.
-        if not FROM_EMAIL:                                                            # Si no se definió EMAIL_FROM...
-            FROM_EMAIL = os.getenv("EMAIL_USER", "")                                  # Usa la propia cuenta Gmail como remitente.
+# Valida configuración crítica solo si NO estamos en modo simulación.
+if not DRY_RUN:
+    provider_now = os.getenv("EMAIL_PROVIDER", "sendgrid").lower()
+
+    if provider_now == "brevo":
+        if not os.getenv("BREVO_API_KEY"):
+            raise RuntimeError("Falta BREVO_API_KEY para envíos reales con Brevo.")
+        if not FROM_EMAIL:
+            raise RuntimeError("Falta EMAIL_FROM para envíos reales con Brevo.")
+    
+    elif provider_now == "sendgrid":
+        if not SENDGRID_API_KEY:
+            raise RuntimeError("Falta SENDGRID_API_KEY para envíos reales con SendGrid.")
+        if not FROM_EMAIL:
+            raise RuntimeError("Falta EMAIL_FROM para envíos reales con SendGrid.")
+
+    elif provider_now == "gmail":
+        if not os.getenv("EMAIL_USER", "") or not os.getenv("EMAIL_PASS", ""):
+            raise RuntimeError("Faltan EMAIL_USER o EMAIL_PASS para envíos reales con Gmail.")
+        # Para Gmail, si FROM_EMAIL no está, se puede usar el propio USER como fallback
+        if not FROM_EMAIL:
+            FROM_EMAIL = os.getenv("EMAIL_USER", "")
 
 # =================================================================================
 # 📢 Webhook de alertas (opcional)                                                     # Sección de webhook opcional.
