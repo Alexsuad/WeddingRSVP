@@ -123,8 +123,8 @@ st.title("🎉 " + t("ok.title", final_lang))
 
 # Alcance de invitación / pista de horarios
 invited_to_ceremony: bool = bool(rsvp_data.get("invited_to_ceremony"))
-ceremony_time: str = st.secrets.get("CEREMONY_TIME", "15:00")
-reception_time: str = st.secrets.get("RECEPTION_TIME", "17:00")
+ceremony_time: str = os.getenv("CEREMONY_TIME") or st.secrets.get("CEREMONY_TIME", "15:00")
+reception_time: str = os.getenv("RECEPTION_TIME") or st.secrets.get("RECEPTION_TIME", "17:00")
 
 panel_title: str = t("invite.panel_title", final_lang)
 scope_text_key: str = "invite.scope.full" if invited_to_ceremony else "invite.scope.reception"
