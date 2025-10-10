@@ -18,7 +18,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    from utils.invite import normalize_invite_type  # <- AQUÍ está el helper real
+    from utils.invite import normalize_invite_type
 except Exception as e:
     raise ImportError(
         "No pude importar 'utils.invite.normalize_invite_type'. "
@@ -37,26 +37,28 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 # --- Helpers de normalización/validación ---
+
+# AJUSTE #1: Función de normalización de teléfono mejorada
 def normalize_phone(phone: str) -> str:
-    """Deja solo dígitos y un '+' inicial si existe. Colapsa múltiples '+'. Quita espacios/guiones."""
+    """Normaliza teléfono: quita basura, asegura que empiece con '+' si hay dígitos."""
     if not isinstance(phone, str):
         return ""
-    raw = re.sub(r"[^\d+]", "", phone.strip())
-    raw = re.sub(r"^\++", "+", raw)
-    return raw
+    # 1. Quita todo lo que no sea un dígito
+    raw = re.sub(r"\D", "", phone.strip())
+    if not raw:
+        return ""
+    # 2. Asegura que empiece con '+'
+    return f"+{raw}"
 
 
 def is_valid_phone_e164ish(phone: str) -> bool:
     """
-    Acepta '+NNNN...' (8 a 15 dígitos totales) o solo dígitos (8 a 15).
+    Acepta '+NNNN...' (8 a 15 dígitos totales).
     No valida región estricta (para eso usaríamos 'phonenumbers').
     """
-    if not phone:
+    if not phone or not phone.startswith("+"):
         return False
-    if phone.startswith("+"):
-        digits = re.sub(r"\D", "", phone[1:])
-    else:
-        digits = re.sub(r"\D", "", phone)
+    digits = re.sub(r"\D", "", phone)
     return 8 <= len(digits) <= 15
 
 
@@ -69,7 +71,6 @@ def _read_table(
     elif file_path.lower().endswith(".csv"):
         return pd.read_csv(file_path, dtype=str, sep=csv_sep, encoding=csv_encoding).fillna("")
     else:
-        # Intento flexible: primero Excel, si falla intenta CSV
         try:
             return pd.read_excel(file_path, dtype=str, sheet_name=sheet_name).fillna("")
         except Exception:
@@ -89,7 +90,6 @@ def load_and_validate_guest_list(
     Devuelve (df_validado, errores). Si strict=True y hay errores, lanza ValueError.
     Permite elegir sheet_name en Excel y separador/encoding en CSV.
     """
-    # --- 1) Carga ---
     try:
         df = _read_table(file_path, sheet_name=sheet_name, csv_sep=csv_sep, csv_encoding=csv_encoding)
     except FileNotFoundError:
@@ -97,66 +97,54 @@ def load_and_validate_guest_list(
     except Exception as e:
         raise ValueError(f"No se pudo leer el archivo '{file_path}': {e}")
 
-    # --- 1.1) Normalización de encabezados ---
     df.columns = df.columns.str.strip().str.lower()
-    missing_cols = [c for c in REQUIRED_COLUMNS if c not in df.columns]
-    # 'guest_code' es opcional
-    if "guest_code" not in df.columns:
-        missing_cols = [c for c in missing_cols if c != "guest_code"]
+    
+    # Verificación de columnas obligatorias
+    actual_cols = set(df.columns)
+    missing_cols = [c for c in REQUIRED_COLUMNS if c not in actual_cols]
     if missing_cols:
         raise ValueError(f"Faltan columnas obligatorias: {', '.join(missing_cols)}")
 
     errors: List[str] = []
     validated_rows = []
 
-    # --- 2) Validación fila a fila ---
     for idx, row in df.iterrows():
         row_num = idx + 2
 
         full_name = row.get("full_name", "").strip()
         language = (row.get("language", "") or "").strip().lower()
-
-        # ✅ Normaliza invite_type con el helper centralizado
-        invite_type_ui = normalize_invite_type(row.get("invite_type"))          # Normaliza a valores de UI: 'full' o 'reception'.
-        invite_type = "full" if invite_type_ui == "full" else "ceremony"        # Traduce a los valores que espera el backend: 'full' o 'ceremony'.
-
-
-        # ✅ Email vacío => None
+        invite_type = "full" if normalize_invite_type(row.get("invite_type")) == "full" else "ceremony"
+        
         email = (row.get("email", "") or "").strip()
         if not email:
             email = None
 
         phone = normalize_phone(row.get("phone", ""))
 
-        # Opcionales
         side = (row.get("side", "") or "").strip().lower()
         if side and side not in VALID_SIDES:
             side = ""
 
-        relationship = (row.get("relationship", "") or "").strip()
-        if len(relationship) > 120:
-            relationship = relationship[:120]
+        relationship = (row.get("relationship", "") or "").strip()[:120]
+        group_id = (row.get("group_id", "") or "").strip()[:80]
+        
+        # AJUSTE #2: Respetar el guest_code del CSV si existe
+        guest_code = (row.get("guest_code", "") or "").strip()
+        if not guest_code:
+            guest_code = None # Se enviará None para que el backend lo genere
 
-        group_id = (row.get("group_id", "") or "").strip()
-        if len(group_id) > 80:
-            group_id = group_id[:80]
-
-        # Reglas
+        # Reglas de validación
         if not full_name:
             errors.append(f"Fila {row_num}: 'full_name' está vacío.")
         if language not in VALID_LANGUAGES:
             errors.append(f"Fila {row_num}: idioma '{row.get('language')}' no válido. Use: es, en, ro.")
-
         if not email and not phone:
             errors.append(f"Fila {row_num}: debe proveer email o phone (al menos uno).")
-
         if email and not EMAIL_RE.match(email):
             errors.append(f"Fila {row_num}: email '{email}' parece inválido.")
-
         if phone and not is_valid_phone_e164ish(phone):
-            errors.append(f"Fila {row_num}: phone '{phone}' no parece válido (8–15 dígitos).")
+            errors.append(f"Fila {row_num}: phone '{phone}' no parece válido (debe empezar con '+').")
 
-        # max_accomp
         try:
             max_accomp = int((row.get("max_accomp", 0) or "0").strip())
             if not (0 <= max_accomp <= 10):
@@ -166,25 +154,26 @@ def load_and_validate_guest_list(
             max_accomp = 0
 
         # Recolecta fila normalizada
-        normalized = row.copy()
-        normalized["full_name"] = full_name
-        normalized["language"] = language
-        normalized["invite_type"] = invite_type
-        normalized["email"] = email
-        normalized["phone"] = phone
-        normalized["max_accomp"] = max_accomp
-        normalized["side"] = side
-        normalized["relationship"] = relationship
-        normalized["group_id"] = group_id
-
-        # guest_code es opcional: si viene en el CSV se respeta; si no, lo generará el backend
+        normalized = row.to_dict()
+        normalized.update({
+            "full_name": full_name,
+            "language": language,
+            "invite_type": invite_type,
+            "email": email,
+            "phone": phone,
+            "max_accomp": max_accomp,
+            "side": side or None,
+            "relationship": relationship or None,
+            "group_id": group_id or None,
+            "guest_code": guest_code, # Añade el guest_code (puede ser None)
+        })
         validated_rows.append(normalized)
 
     clean_df = pd.DataFrame(validated_rows)
 
-    # --- 3) Duplicados útiles de detectar (warning) ---
+    # Detección de duplicados
     for col in ["email", "phone"]:
-        non_empty = clean_df[clean_df[col].notna()]
+        non_empty = clean_df[clean_df[col].notna() & (clean_df[col] != "")]
         if not non_empty.empty:
             dups = non_empty[non_empty[col].duplicated(keep=False)].sort_values(col)
             if not dups.empty:
@@ -210,5 +199,4 @@ def df_to_records(df: pd.DataFrame) -> List[dict]:
 
 
 if __name__ == "__main__":
-    # Este módulo está pensado para ser importado por scripts/import_guests.py
     print("load_guests.py: módulo utilitario. Úsalo desde scripts/import_guests.py")
