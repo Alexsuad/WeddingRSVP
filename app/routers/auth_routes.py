@@ -268,7 +268,10 @@ def request_access(                                                             
     }                                                                               # Fin del diccionario de respuesta.
 
     if not guest:                                                                   # Si no hubo match en la búsqueda...
-        return generic                                                              # Devuelve la respuesta genérica 200 (no revela nada).
+       raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="No se encontró una invitación con los datos proporcionados. Por favor, verifica la información."
+    )                                                             # Devuelve la respuesta genérica 200 (no revela nada).
 
     # --- Envío conmutado según SEND_ACCESS_MODE (code|magic) ---
     to_email = (payload.email or "").strip()                                        # Normaliza destino tomando el email del payload.
