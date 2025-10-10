@@ -121,8 +121,8 @@ allergy_suggestions: List[str] = meta.get("allergy_suggestions") or meta.get("al
 invited_flag_raw = str(guest.get("invited_to_ceremony", False)).strip().lower()
 invited_full = invited_flag_raw in ("true", "1", "yes", "y", "si", "sí")
 
-ceremony_time  = st.secrets.get("CEREMONY_TIME", "15:00")
-reception_time = st.secrets.get("RECEPTION_TIME", "17:00")
+ceremony_time = os.getenv("CEREMONY_TIME") or st.secrets.get("CEREMONY_TIME", "15:00")
+reception_time = os.getenv("RECEPTION_TIME") or st.secrets.get("RECEPTION_TIME", "17:00")
 
 # --- tarjeta invitación ---
 st.markdown('<div class="hero-card">', unsafe_allow_html=True)
