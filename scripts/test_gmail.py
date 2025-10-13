@@ -1,52 +1,65 @@
-# scripts/test_gmail.py
+# ─────────────────────────────────────────────────────────
+# TEST LOCAL · Mailer directo (usa tu .env)
+# ─────────────────────────────────────────────────────────
 import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Añade la raíz del proyecto al path para poder importar 'app'
+# ── BLOQUE 1 · Importación proyecto y .env ───────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
+load_dotenv()  # Carga variables del .env (EMAIL_*, DRY_RUN, PUBLIC_LOGIN_URL, etc.)
 
-# Carga las variables de entorno desde el archivo .env
-load_dotenv()
-print("✅ Archivo .env cargado.")
-
-# Ahora importa el mailer de tu aplicación
+# ── BLOQUE 2 · Importar mailer y logger ──────────────────────────────────────
 from app import mailer
 from loguru import logger
 
-# --- DATOS DE PRUEBA ---
-# Usamos tu propio correo como destinatario de la prueba.
-TEST_TO_EMAIL = "nalexsua75@gmail.com"
-TEST_GUEST_NAME = "Alex (Prueba Local)"
-TEST_GUEST_CODE = "TEST-1234"
-TEST_LANG = "es"
+# ── BLOQUE 3 · Datos de prueba (personalizables por .env) ────────────────────
+TO_EMAIL = os.getenv("TEST_TO", os.getenv("EMAIL_USER"))      # Si no se define TEST_TO, usa tu remitente.
+GUEST_NAME = "Invitat Test"
+GUEST_CODE = "ABC-123"
+MAGIC_URL = os.getenv("PUBLIC_LOGIN_URL", "https://rsvp.local/login")
 
-logger.info(f"Intentando enviar correo de prueba a: {TEST_TO_EMAIL}")
-logger.info(f"Usando el proveedor: {os.getenv('EMAIL_PROVIDER')}")
-logger.info(f"Usando el usuario: {os.getenv('EMAIL_USER')}")
-logger.info(f"DRY_RUN está en: {os.getenv('DRY_RUN')}")
+# ── BLOQUE 4 · Info de contexto (útil en consola) ────────────────────────────
+logger.info(f"→ Destinatario: {TO_EMAIL}")
+logger.info(f"→ Provider: {os.getenv('EMAIL_PROVIDER')}")
+logger.info(f"→ DRY_RUN: {os.getenv('DRY_RUN')} (1=simula, 0=envío real)")
 
-try:
-    # Llama a la misma función que usa tu API para enviar el código
-    success = mailer.send_guest_code_email(
-        to_email=TEST_TO_EMAIL,
-        guest_name=TEST_GUEST_NAME,
-        guest_code=TEST_GUEST_CODE,
-        language=TEST_LANG,
+def main():
+    # ── Caso 1: guest_code en RO con variante regional ───────────────────────
+    logger.info("Caso 1 · guest_code con language='ro-RO' (debe normalizar a 'ro').")
+    ok1 = mailer.send_guest_code_email(
+        to_email=TO_EMAIL,
+        guest_name=GUEST_NAME,
+        guest_code=GUEST_CODE,
+        language="ro-RO",  # Variante regional; tu mailer la normaliza a 'ro'
     )
+    logger.info(f"guest_code enviado: {ok1}")
 
-    if success:
-        logger.success("✅ Correo enviado con éxito (según el mailer). Revisa tu bandeja de entrada.")
-    else:
-        logger.error("❌ El mailer devolvió 'False'. Hubo un error durante el envío. Revisa los logs anteriores.")
+    # ── Caso 2: magic_link en RO en mayúsculas ───────────────────────────────
+    logger.info("Caso 2 · magic_link con language='RO' (debe normalizar a 'ro').")
+    ok2 = mailer.send_magic_link_email(
+        to_email=TO_EMAIL,
+        language="RO",     # Mayúsculas; tu mailer la normaliza a 'ro'
+        magic_url=MAGIC_URL,
+    )
+    logger.info(f"magic_link enviado: {ok2}")
 
-except Exception as e:
-    logger.exception("💥 Ocurrió una excepción inesperada durante el envío del correo.")
-    print("\n--- POSIBLES CAUSAS ---")
-    print("1. ¿La contraseña en EMAIL_PASS es una 'Contraseña de Aplicación' de 16 dígitos de Google?")
-    print("2. ¿La Autenticación en Dos Pasos (2FA) está activada en esa cuenta de Google?")
-    print("3. ¿Hay algún firewall (Windows, antivirus) bloqueando la conexión al puerto 587?")
-    print("4. ¿Has recibido un email de 'Alerta de seguridad' de Google en tu cuenta indicando un intento de inicio de sesión bloqueado?")
+    # ── Caso 3: fallback EN (sin language) ───────────────────────────────────
+    logger.info("Caso 3 · guest_code sin language (debe caer a EN por defecto).")
+    ok3 = mailer.send_guest_code_email(
+        to_email=TO_EMAIL,
+        guest_name=GUEST_NAME,
+        guest_code=GUEST_CODE,
+        language=None,     # Forzamos vacío → debe caer a EN (tu preferencia)
+    )
+    logger.info(f"guest_code (fallback EN) enviado: {ok3}")
+
+if __name__ == "__main__":
+    try:
+        main()
+        logger.success("✅ Pruebas terminadas. Revisa consola (DRY_RUN=1) o tu bandeja (DRY_RUN=0).")
+    except Exception:
+        logger.exception("💥 Excepción durante la prueba local.")

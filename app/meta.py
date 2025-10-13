@@ -5,16 +5,15 @@ from typing import Dict, List  # Tipado para claridad en la respuesta.
 
 router = APIRouter(prefix="/api/meta", tags=["meta"])  # Crea un router con prefijo /api/meta.
 
-@router.get("/options")  # Define el endpoint GET /api/meta/options.
-def get_meta_options() -> Dict[str, List[str]]:  # Firma que devuelve un dict con listas de strings.
-    return {  # Retorna un diccionario con catálogos simples.
-        "allergy_suggestions": [  # Lista de sugerencias de alergias que el frontend puede mostrar.
-            "Gluten",  # Sugerencia 1.
-            "Lácteos",  # Sugerencia 2.
-            "Frutos secos",  # Sugerencia 3.
-            "Mariscos",  # Sugerencia 4.
-            "Huevos",  # Sugerencia 5.
-            "Soja",  # Sugerencia 6.
-        ],  # Fin de la lista.
-        # Nota: Ya no exponemos opciones de menú porque hay un único servicio (adulto/niño implícito).
-    }  # Fin del dict.
+@router.get("/options")
+def get_meta_options() -> Dict[str, List[str]]:
+    """
+    Devuelve listas de CÓDIGOS (neutros) para que el frontend traduzca con t().
+    Mantiene compatibilidad: expone 'allergens' y también 'allergy_suggestions'.
+    """
+    allergens_codes = ["gluten", "dairy", "nuts", "seafood", "eggs", "soy"]
+    return {
+        "allergens": allergens_codes,
+        "allergy_suggestions": allergens_codes,  # alias legacy para no romper fronts viejos
+        # Si necesitas más catálogos, agrégalos como códigos: attendance/menu/etc.
+    }

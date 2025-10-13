@@ -1,190 +1,135 @@
-# pages/01_Recuperar_Codigo.py  # Ruta y nombre del archivo (página interna de recuperación).
+# pages/01_Recuperar_Codigo.py                                                             # Ruta de la página en Streamlit
 
-# =====================================================================================
-# 🔁 Recuperar código de invitado — Multilenguaje (ES/EN/RO)
-# -------------------------------------------------------------------------------------
-# UI que permite solicitar recuperación del código de invitado contra /api/recover-code
-# usando i18n con utils/lang_selector.py (selector de idioma) y utils/translations.py
-# (t()). Incluye fallbacks locales si faltan claves recover.* en el archivo de
-# traducciones, para evitar mostrar las claves crudas en pantalla.
-# ➕ Añadido: botón "Cancelar" dentro del formulario que vuelve al Login, sin romper UX.
-# =====================================================================================
+# =======================================================================================
+# 🔁 Recuperar código de invitado — UI limpia, centrada y consistente (ES/EN/RO)
+# ---------------------------------------------------------------------------------------
+# - Título centrado (h3) para igualar jerarquía con el resto.
+# - Un (1) único CTA: "Solicitar recuperación".
+# - Link inferior "Volver al inicio" (sin botón extra de RSVP).
+# - Menú lateral coherente (Inicio / Solicitar Acceso / Iniciar sesión), ocultando "Recuperar".
+# - Sin dependencias de utils/nav.py (usamos utils/ui.py).
+# =======================================================================================
 
-import os
-from pathlib import Path
-import requests
-import streamlit as st
-from utils.lang_selector import render_lang_selector
-from utils.translations import t
-from utils.nav import hide_native_sidebar_nav, render_nav
+import os                                              # Accede a variables de entorno
+import requests                                        # Realiza la llamada POST a la API
+import streamlit as st                                 # UI de Streamlit
+from utils.lang_selector import render_lang_selector   # Selector de idioma (ES/EN/RO)
+from utils.translations import t                       # Función de traducción i18n
+from utils.ui import apply_global_styles, render_side_nav  # Estilos globales + menú lateral
 
-# -------------------------------------------------------------------------------------
-# Fallbacks locales por idioma si faltan claves recover.* en translations.py.
-LOCAL_STRINGS = {
-    "es": {
-        "title": "Recuperar tu código",
-        "subtitle": "Ingresa tu email o teléfono usado en la invitación. Si estás en la lista, te enviaremos un mensaje.",
-        "email": "Email (opcional)",
-        "phone": "Teléfono (opcional)",
-        "submit": "Solicitar recuperación",
-        "success": "Si tu contacto está en la lista de invitados, recibirás un mensaje en breve.",
-        "rate_limited": "Has realizado demasiados intentos. Inténtalo nuevamente en ~{retry}.",
-        "invalid": "Solicitud inválida. Verifica los datos e inténtalo de nuevo.",
-        "generic": "No pudimos procesar la solicitud en este momento. Inténtalo más tarde.",
-        "network": "No hay conexión con el servidor. Detalle: {err}",
-        "back": "⬅️ Volver al inicio",
-        "go_rsvp": "Ir al formulario RSVP",
-    },
-    "en": {
-        "title": "Recover your code",
-        "subtitle": "Enter the email or phone used in your invitation. If you are on the list, we will send you a message.",
-        "email": "Email (optional)",
-        "phone": "Phone (optional)",
-        "submit": "Request recovery",
-        "success": "If your contact is on our guest list, you will receive a message shortly.",
-        "rate_limited": "Too many attempts. Try again in ~{retry}.",
-        "invalid": "Invalid request. Please check the data and try again.",
-        "generic": "We could not process your request right now. Please try again later.",
-        "network": "Cannot reach the server. Details: {err}",
-        "back": "⬅️ Back to home",
-        "go_rsvp": "Go to RSVP form",
-    },
-    "ro": {
-        "title": "Recuperează-ți codul",
-        "subtitle": "Introdu emailul sau telefonul folosit în invitație. Dacă ești în listă, vei primi un mesaj.",
-        "email": "Email (opțional)",
-        "phone": "Telefon (opțional)",
-        "submit": "Solicită recuperarea",
-        "success": "Dacă datele tale se află în lista de invitați, vei primi în curând un mesaj.",
-        "rate_limited": "Prea multe încercări. Încearcă din nou peste ~{retry}.",
-        "invalid": "Cerere invalidă. Verifică datele și încearcă din nou.",
-        "generic": "Nu am putut procesa cererea acum. Încearcă mai târziu.",
-        "network": "Nu se poate contacta serverul. Detalii: {err}",
-        "back": "⬅️ Înapoi la început",
-        "go_rsvp": "Mergi la formularul RSVP",
-    },
-}
-
-def tr(key: str, lang_code: str) -> str:
-    full_key = f"recover.{key}"
-    try:
-        value = t(full_key, lang_code)
-        if value and value != full_key:
-            return value
-    except Exception:
-        pass
-    return LOCAL_STRINGS.get(lang_code, LOCAL_STRINGS["en"]).get(key, full_key)
-
-# -------------------------------------------------------------------------------------
-# Configuración de página y entorno.
-st.set_page_config(
-    page_title="Recuperar código",
-    page_icon="🔁",
-    layout="centered",
+# ---------------------------------------------
+# 1) Configuración de página (PRIMERO SIEMPRE)
+# ---------------------------------------------
+st.set_page_config(                                   # Define metadatos de la página
+    page_title="Recuperar código",                    # Título de la pestaña del navegador
+    page_icon="🔁",                                   # Icono de la pestaña
+    layout="centered",                                # Layout centrado
+    initial_sidebar_state="collapsed",                # Colapsa sidebar nativa
 )
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
-RECOVER_ENDPOINT = f"{API_BASE_URL.rstrip('/')}/api/recover-code"
-RSVP_URL = os.getenv("RSVP_URL", "").strip()
+# ---------------------------------------------
+# 2) Estilos globales compartidos (UI base)
+# ---------------------------------------------
+apply_global_styles()                                 # Inyecta tipografías, fondo y limpieza del <form>
 
-# -------------------------------------------------------------------------------------
-# Menú lateral e idioma.
-hide_native_sidebar_nav()
-lang = render_lang_selector()
-render_nav({
-    "pages/0_Login.py": t("nav.login", lang),
-    "pages/1_Formulario_RSVP.py": t("nav.form", lang),
-    "pages/2_Confirmado.py": t("nav.confirmed", lang),
-})
+# ---------------------------------------------
+# 3) Constantes / Endpoints
+# ---------------------------------------------
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")  # Base de la API (env o local)
+RECOVER_ENDPOINT = f"{API_BASE_URL.rstrip('/')}/api/recover-code"  # Endpoint de recuperación
 
-# -------------------------------------------------------------------------------------
-# Inyección opcional de tokens CSS para look&feel coherente.
-tokens_path = Path("tokens.css")
-if tokens_path.exists():
-    st.markdown(
-        f"<style>{tokens_path.read_text(encoding='utf-8')}</style>",
-        unsafe_allow_html=True,
+# ---------------------------------------------
+# 4) Idioma y menú lateral coherente
+# ---------------------------------------------
+lang = render_lang_selector()                         # Dibuja selector de idioma y retorna el idioma activo
+render_side_nav(                                      # Dibuja el menú flotante coherente
+    t,                                                # Función de traducción
+    lang,                                             # Idioma activo
+    position="left",                                  # Menú a la IZQUIERDA para coherencia con tus capturas
+    side_offset_px=300,                                # Separación del borde para que no quede "pegado"
+    hide=["recover"],                                 # Oculta "Recuperar Código" (estamos en esta página)
+    show_emojis=True                                  # Muestra emojis en los botones del menú
+)
+
+# ---------------------------------------------
+# 5) Cabecera centrada (título + subtítulo)
+# ---------------------------------------------
+st.markdown(                                          # Título h3 centrado con Playfair (coherente al resto)
+    f"""
+    <div style="text-align:center; margin-top: 16px; margin-bottom: 8px;">
+      <h3 style="font-family:'Playfair Display',serif; font-weight:700; margin:0;">
+        {t("recover.title", lang)}
+      </h3>
+    </div>
+    """,
+    unsafe_allow_html=True,                           # Permitimos HTML para estilizar
+)
+st.write(t("recover.subtitle", lang))                 # Subtítulo explicativo corto
+st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)  # Pequeño respiro vertical
+
+# ---------------------------------------------
+# 6) Formulario (1 solo CTA)
+# ---------------------------------------------
+with st.form("recover_form"):                         # Abre el <form> controlado por Streamlit
+    # Placeholders localizados (solo aquí para UX; si prefieres, los llevamos a translations)
+    email_ph = "tu-correo@ejemplo.com" if lang == "es" else ("name@example.com" if lang == "en" else "email@exemplu.com")  # Placeholder por idioma
+    phone_ph = "+34 600 123 123" if lang == "es" else ("+44 7700 900123" if lang == "en" else "+40 712 345 678")           # Placeholder por idioma
+
+    email = st.text_input(                            # Campo de email opcional
+        t("recover.email", lang),                     # Etiqueta traducida
+        value="",                                     # Valor por defecto vacío
+        placeholder=email_ph,                         # Placeholder localizado
+    )
+    phone = st.text_input(                            # Campo de teléfono opcional
+        t("recover.phone", lang),                     # Etiqueta traducida
+        value="",                                     # Valor por defecto vacío
+        placeholder=phone_ph,                         # Placeholder localizado
     )
 
-# -------------------------------------------------------------------------------------
-# Encabezado i18n.
-st.title(f"🔁 {tr('title', lang)}")
-st.write(tr("subtitle", lang))
-
-# -------------------------------------------------------------------------------------
-# Formulario de solicitud (email o teléfono) con botón Cancelar.
-with st.form("recover_form"):
-    email = st.text_input(
-        tr("email", lang),
-        value="",
-        placeholder="tu-correo@ejemplo.com" if lang == "es" else ("email@example.com" if lang == "en" else "email@exemplu.com"),
-    )
-    phone = st.text_input(
-        tr("phone", lang),
-        value="",
-        placeholder="+34 600 123 123" if lang == "es" else ("+44 7700 900123" if lang == "en" else "+40 712 345 678"),
+    submit = st.form_submit_button(                   # ÚNICO CTA del formulario
+        t("recover.submit", lang),                    # Texto del botón traducido
+        type="primary",                               # Botón primario (negro por estilos globales)
+        use_container_width=True,                     # Ocupa el ancho del contenedor
     )
 
-    # Botones lado a lado: Enviar / Cancelar (el Cancelar no dispara validaciones)
-    col_ok, col_cancel = st.columns(2)
-    submit = col_ok.form_submit_button(tr("submit", lang), type="primary", use_container_width=True)
-    cancel = col_cancel.form_submit_button(t("form.cancel", lang), use_container_width=True)
+# ---------------------------------------------
+# 7) Lógica del envío (sin botón cancelar)
+# ---------------------------------------------
+if submit:                                            # Solo actúa si el usuario pulsó "Solicitar recuperación"
+    email_norm = (email or "").strip().lower()        # Normaliza email
+    phone_norm = (phone or "").strip()                # Normaliza teléfono (de momento solo recortamos)
 
-# -------------------------------------------------------------------------------------
-# Lógica de botones (prioridad: cancelar -> no ejecutar validaciones).
-if cancel:
-    # Volver a Login de inmediato, sin tocar backend ni hacer validaciones
-    st.switch_page("pages/0_Login.py")
-
-elif submit:
-    email_norm = email.strip().lower()
-    phone_norm = phone.strip()
-
-    if not email_norm and not phone_norm:
-        st.warning(tr("invalid", lang))
+    if not email_norm and not phone_norm:             # Si no envía nada, advertimos
+        st.warning(t("recover.invalid", lang))        # Mensaje de validación
     else:
-        payload = {"email": email_norm or None, "phone": phone_norm or None}
-        with st.spinner("…"):
+        payload = {"email": email_norm or None, "phone": phone_norm or None}  # Cuerpo de la petición
+        with st.spinner("…"):                         # Muestra spinner breve durante la llamada
             try:
-                resp = requests.post(RECOVER_ENDPOINT, json=payload, timeout=10)
-                if resp.status_code == 200:
-                    st.success(tr("success", lang))
-                elif resp.status_code == 429:
-                    retry_after = resp.headers.get("Retry-After", None)
-                    human_retry = (
-                        f"{retry_after} s" if (retry_after and retry_after.isdigit()) else
-                        {"es": "unos segundos", "en": "a few seconds", "ro": "câteva secunde"}.get(lang, "a few seconds")
-                    )
-                    st.warning(tr("rate_limited", lang).format(retry=human_retry))
-                elif resp.status_code == 400:
-                    st.error(tr("invalid", lang))
-                else:
-                    st.error(tr("generic", lang))
-            except requests.RequestException as e:
-                st.error(tr("network", lang).format(err=e))
+                resp = requests.post(RECOVER_ENDPOINT, json=payload, timeout=10)  # Llama a la API
+                if resp.status_code == 200:           # Éxito
+                    st.success(t("recover.success", lang))  # Mensaje positivo
+                elif resp.status_code == 429:         # Rate limit
+                    retry_after = resp.headers.get("Retry-After", None)          # Lee cabecera Retry-After
+                    human_retry = (f"{retry_after} s" if (retry_after and str(retry_after).isdigit())
+                                    else {"es": "unos segundos", "en": "a few seconds", "ro": "câteva secunde"}.get(lang, "a few seconds"))  # Texto amable
+                    st.warning(t("recover.rate_limited", lang).format(retry=human_retry))  # Mensaje con tiempo
+                elif resp.status_code == 400:         # Petición inválida
+                    st.error(t("recover.invalid", lang))                              # Error de validación
+                else:                                 # Cualquier otro caso
+                    st.error(t("recover.generic", lang))                              # Error genérico
+            except requests.RequestException as e:    # Errores de red/timeout/etc.
+                st.error(t("recover.network", lang).format(err=e))                   # Mensaje de red
 
-# -------------------------------------------------------------------------------------
-# Acciones auxiliares (se mantienen como estaban).
-st.divider()
-col1, col2 = st.columns(2)
-
-with col1:
-    try:
-        st.button(
-            tr("back", lang),
-            on_click=lambda: st.switch_page("pages/0_Login.py"),
-            use_container_width=True,
-        )
-    except Exception:
-        st.write("↩️")
-        st.write(t("nav.login", lang))
-
-with col2:
-    if RSVP_URL:
-        st.link_button(
-            tr("go_rsvp", lang),
-            RSVP_URL,
-            use_container_width=True,
-        )
-    else:
-        st.write(" ")
+# ---------------------------------------------
+# 8) Enlace inferior: Volver al inicio (solo 1)
+# ---------------------------------------------
+st.markdown(                                          # Pintamos un enlace ligero, centrado
+    f"""
+    <div style="text-align:center; margin-top: 12px;">
+      <a href="/Login" target="_self" style="color: var(--muted); text-decoration:none; font-weight:500;">
+        ⬅️ {t("recover.back", lang)}
+      </a>
+    </div>
+    """,
+    unsafe_allow_html=True,                           # Permitimos HTML
+)

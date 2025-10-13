@@ -15,6 +15,20 @@ import time                                                                     
 from loguru import logger                                                         # Logger de Loguru para trazas claras.
 import os                                                                         # Para leer variables de entorno (.env).
 
+
+# =================================================================================
+# 🔧 HELPERS: normalización de contacto (email y teléfono)
+# =================================================================================
+import re  # ← Asegúrate de tener re importado aquí (o deja esta línea)
+
+def _only_digits(s: str | None) -> str:                             # Función: devuelve solo dígitos del texto dado.
+    s = (s or "")                                                   # Si viene None, lo sustituye por cadena vacía.
+    return re.sub(r"\D", "", s)                                     # Reemplaza todo lo que NO sea dígito por vacío.
+
+def _norm_email(s: str | None) -> str:                              # Función: normaliza email a minúsculas/trim.
+    return (s or "").strip().lower()                                # Quita espacios y pasa a minúsculas.
+
+
 # Importaciones internas del proyecto
 from app import models, schemas, auth, mailer                                     # Modulos internos: modelos, esquemas, auth (tokens), mailer.
 from app.db import SessionLocal                                                   # Fábrica de sesiones de BD (get_db manual).

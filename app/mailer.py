@@ -578,82 +578,195 @@ def send_recovery_email(to_email: str, guest_name: str, guest_code: str, languag
     return send_email(to_email=to_email, subject=subject, body=body, to_name=guest_name) # Envío texto plano, pasando el nombre.
 
 def send_magic_link_email(to_email: str, language: str | Enum, magic_url: str) -> bool:
-    """Envía el correo de Magic Link usando la plantilla HTML (i18n) con logs y fallback i18n."""  # Docstring.
-    lang_value = language.value if isinstance(language, Enum) else (language or "en") # Normaliza idioma.
-    lang_code = lang_value if lang_value in SUPPORTED_LANGS else "en"                  # Asegura idioma compatible.
-    logger.info(f"Preparando envío de Magic Link -> to={to_email} lang={lang_code}")   # Log útil de idioma final.
-    html_out = _build_email_html(lang_code, magic_url)                                 # Construye HTML con CTA.
-    subject = SUBJECTS["magic_link"].get(lang_code, SUBJECTS["magic_link"]["en"])      # Asunto i18n.
-    text_fallbacks = {                                                                 # Fallback de texto por idioma.
-        "es": f"Abre este enlace para confirmar tu asistencia: {magic_url}",           # ES.
-        "ro": f"Deschide acest link pentru a-ți confirma prezența: {magic_url}",       # RO.
-        "en": f"Open this link to confirm your attendance: {magic_url}",               # EN.
-    }                                                                                  # Fin mapa de fallbacks.
-    text_fallback = text_fallbacks.get(lang_code, text_fallbacks["en"])                # Selecciona fallback final.
-    return send_email_html(                                                            # Envía HTML con fallback.
+    """Envía el correo de Magic Link usando plantilla HTML (i18n) con logs y fallback i18n.
+    - language puede venir como Enum, str, vacío o con variante regional (ro-RO, en-US, es-419).
+    - Objetivo: conservar RO/ES/EN cuando corresponde y caer a EN solo si todo falla.
+    """
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # BLOQUE 1 · Normalización defensiva de idioma (manteniendo EN como fallback)
+    # ─────────────────────────────────────────────────────────────────────────────
+    _raw_lang = getattr(language, "value", language)          # Acepta Enum(.value) o str/None.
+    _lang = (_raw_lang or "").strip().lower()                 # Minúsculas y trimming; None → "".
+
+    if not _lang:                                             # Si viene vacío, usa fallback inmediato…
+        _lang = "en"                                          # …EN (idioma por defecto del sistema).
+
+    if "-" in _lang:                                          # Si viene con región (ro-RO, en-US, es-419)…
+        _lang = _lang.split("-")[0]                           # …quédate con el código base: ro/en/es.
+
+    if _lang not in SUPPORTED_LANGS:                          # Si aún no coincide exactamente…
+        if _lang.startswith("ro"):                            # Variantes de rumano → ro
+            _lang = "ro"
+        elif _lang.startswith("es"):                          # Variantes de español → es
+            _lang = "es"
+        elif _lang.startswith("en"):                          # Variantes de inglés → en
+            _lang = "en"
+        else:                                                 # Cualquier otro valor raro → fallback final
+            _lang = "en"
+
+    lang_code = _lang                                         # "es" | "en" | "ro" (o "en" por fallback final)
+    logger.info(f"[MAILER] Preparando envío de Magic Link → to={to_email} lang={lang_code}")
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # BLOQUE 2 · Asunto i18n
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Usa tu mapa global SUBJECTS["magic_link"] y cae a EN si faltara la clave.
+    subject = SUBJECTS["magic_link"].get(lang_code, SUBJECTS["magic_link"]["en"])
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # BLOQUE 3 · Cuerpo HTML (helper existente)
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Mantiene tu helper actual para construir el HTML con CTA.
+    html_out = _build_email_html(lang_code, magic_url)
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # BLOQUE 4 · Fallback de texto plano por idioma (clientes sin HTML)
+    # ─────────────────────────────────────────────────────────────────────────────
+    text_fallbacks = {
+        "es": f"Abre este enlace para confirmar tu asistencia: {magic_url}",
+        "ro": f"Deschide acest link pentru a-ți confirma prezența: {magic_url}",
+        "en": f"Open this link to confirm your attendance: {magic_url}",
+    }
+    text_fallback = text_fallbacks.get(lang_code, text_fallbacks["en"])
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # BLOQUE 5 · Envío (helper HTML+texto)
+    # ─────────────────────────────────────────────────────────────────────────────
+    return send_email_html(
         to_email=to_email,
         subject=subject,
         html_body=html_out,
         text_fallback=text_fallback,
-        to_name=""  # No se dispone del nombre del invitado en esta función.
-    )                                                                                  # Fin de llamada.
+        to_name=""  # En esta función no pasamos nombre del invitado.
+    )
+
 
 def send_guest_code_email(to_email: str, guest_name: str, guest_code: str, language: str | Enum) -> bool:
     """Envía un correo HTML minimalista con el código de invitación (i18n + CTA opcional a Login)."""  # Docstring.
-    lang_value = language.value if isinstance(language, Enum) else (language or "en") # Normaliza idioma.
-    lang_code = lang_value if lang_value in SUPPORTED_LANGS else "en"                  # Asegura idioma soportado.
-    logger.info(f"Preparando envío de Guest Code -> to={to_email} lang={lang_code}")   # Log informativo.
 
-    subject_map = {                                                                    # Asuntos por idioma.
-        "es": "Tu código de invitación • Boda Daniela & Cristian",                    # ES.
-        "en": "Your invitation code • Daniela & Cristian Wedding",                    # EN.
-        "ro": "Codul tău de invitație • Nunta Daniela & Cristian",                    # RO.
-    }                                                                                  # Cierre mapa.
-    subject = subject_map.get(lang_code, subject_map["en"])                            # Selección del asunto.
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Normalización defensiva del idioma (manteniendo EN como fallback por defecto)
+    # ─────────────────────────────────────────────────────────────────────────────
+    _raw_lang = getattr(language, "value", language)          # Si 'language' es Enum, usa .value; si es str/None, úsalo tal cual.
+    _lang = (_raw_lang or "").strip().lower()                 # Convierte a minúsculas, quita espacios; si venía None, queda "".
 
-    greet = "Hola" if lang_code == "es" else ("Bună" if lang_code == "ro" else "Hi")  # Saludo por idioma.
-    instr = (                                                                          # Instrucción por idioma.
-        "Usa este código en la página de Iniciar sesión."
-        if lang_code == "es" else
-        ("Folosește acest cod pe pagina de autentificare." if lang_code == "ro" else "Use this code on the login page.")
-    )                                                                                  # Cierre instrucción.
-    btn_label = "Iniciar sesión" if lang_code == "es" else ("Conectare" if lang_code == "ro" else "Log in")  # Texto botón.
+    if not _lang:                                             # Si llega vacío (None o ""), decide idioma de reserva…
+        _lang = "en"                                          # …EN como fallback porque es tu idioma por defecto.
 
-    cta_html = ""                                                                      # CTA opcional (Login).
-    if PUBLIC_LOGIN_URL:                                                               # Si hay URL pública de Login…
-        cta_html = (                                                                   # Construye botón accesible.
-            "<p style='margin-top:16px;'>"
-            f"<a href='{PUBLIC_LOGIN_URL}' "
-            "style='display:inline-block;padding:10px 16px;border-radius:8px;"
-            "background:#6D28D9;color:#fff;text-decoration:none;font-weight:600;'"
-            f">{btn_label}</a></p>"
-        )                                                                              # Fin CTA.
+    if "-" in _lang:                                          # Si llega con región (ej. "ro-RO", "en-US", "es-419")…
+        _lang = _lang.split("-")[0]                           # …quédate solo con el código base ("ro", "en", "es").
 
-    html_body = (                                                                      # Ensambla HTML final.
-        "<div style='font-family:Inter,Arial,sans-serif;line-height:1.6'>"
-        f"<h2>{subject}</h2>"
-        f"<p>{greet} {html.escape(guest_name)},</p>"
-        f"<p>{'Tu código de invitación es' if lang_code=='es' else ('Codul tău de invitație este' if lang_code=='ro' else 'Your invitation code is')}: "
-        f"<strong style='font-size:18px;letter-spacing:1px'>{guest_code}</strong></p>"
-        f"<p>{instr}</p>"
-        f"{cta_html}"
-        "</div>"
-    )                                                                                  # Cierra HTML.
+    if _lang not in SUPPORTED_LANGS:                          # Si aún no coincide con los soportados exactos…
+        if _lang.startswith("ro"):                            # …cubre variantes de rumano ("ro-ro", "ro_md", etc.)…
+            _lang = "ro"                                      # …normaliza a "ro".
+        elif _lang.startswith("es"):                          # …cubre variantes de español ("es-419", etc.)…
+            _lang = "es"                                      # …normaliza a "es".
+        elif _lang.startswith("en"):                          # …cubre variantes de inglés ("en-gb", "en-us")…
+            _lang = "en"                                      # …normaliza a "en".
+        else:                                                 # …si no es reconocible…
+            _lang = "en"                                      # …aplica fallback final EN.
 
-    if lang_code == "es":                                                              # Fallback de texto ES.
-        text_fallback = f"Hola {guest_name},\n\nTu código de invitación es: {guest_code}\n\n{instr}"
-    elif lang_code == "ro":                                                            # Fallback de texto RO.
-        text_fallback = f"Bună {guest_name},\n\nCodul tău de invitație este: {guest_code}\n\n{instr}"
-    else:                                                                              # Fallback de texto EN.
-        text_fallback = f"Hi {guest_name},\n\nYour invitation code is: {guest_code}\n\n{instr}"
+    lang_code = _lang                                         # Idioma final ya normalizado: "es" | "en" | "ro" (o "en" por fallback).
+    # ─────────────────────────────────────────────────────────────────────────────
 
-    return send_email_html(                                                            # Envía usando helper HTML+texto.
-        to_email=to_email,
-        subject=subject,
-        html_body=html_body,
-        text_fallback=text_fallback,
-        to_name=guest_name # Pasa el nombre del invitado para personalizar el envío.
-    )                                                                                  # Devuelve True/False.
+    logger.info(f"[MAILER] Preparando envío de Guest Code → to={to_email} lang={lang_code}")  # Log informativo.
+
+    # -----------------------------
+    # Asuntos por idioma (mapa i18n)
+    # -----------------------------
+    subject_map = {                                           # Diccionario local con asunto por idioma.
+        "es": "Tu código de invitación • Boda Daniela & Cristian",   # ES.
+        "en": "Your invitation code • Daniela & Cristian Wedding",   # EN.
+        "ro": "Codul tău de invitație • Nunta Daniela & Cristian",   # RO.
+    }
+
+    subject = subject_map.get(lang_code, subject_map["en"])   # Usa el asunto del idioma; si faltara, cae a EN.
+
+    # ----------------------------------
+    # Textos cortos por idioma (saludo + instrucción + etiqueta de botón)
+    # ----------------------------------
+    greet = "Hola" if lang_code == "es" else ("Bună" if lang_code == "ro" else "Hi")   # Saludo i18n.
+    instr = (                                                                           # Instrucción i18n (frase bajo el código).
+        "Usa este código en la página de Iniciar sesión." if lang_code == "es"
+        else ("Folosește acest cod pe pagina de autentificare." if lang_code == "ro"
+              else "Use this code on the login page.")
+    )
+    btn_label = (                                                                       # Etiqueta del botón (CTA) i18n.
+        "Iniciar sesión" if lang_code == "es" else ("Conectare" if lang_code == "ro" else "Log in")
+    )
+
+    # ----------------------------------
+    # CTA opcional (enlace a login público si está configurado)
+    # ----------------------------------
+    cta_html = ""                                                                       # Inicializa CTA vacío por defecto.
+    if PUBLIC_LOGIN_URL:                                                                # Si hay una URL pública de login…
+        cta_html = (                                                                    # …construye un botón accesible (inline CSS).
+            f'<p style="margin-top:16px;">'
+            f'  <a href="{PUBLIC_LOGIN_URL}" '
+            f'     style="display:inline-block;padding:10px 16px;border-radius:8px;'
+            f'            background:#6D28D9;color:#fff;text-decoration:none;font-weight:600;">'
+            f'    {btn_label}'
+            f'  </a>'
+            f'</p>'
+        )
+
+    # ----------------------------------
+    # Cuerpo HTML del email (simple, seguro y responsive básico)
+    # ----------------------------------
+    html_body = (                                                                         # Plantilla HTML mínima.
+        f'<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'
+        f'            line-height:1.6;color:#0F172A;font-size:16px;">'
+        f'  <p>{greet} {html.escape(guest_name)}</p>'                                     # Saludo + nombre (escapado por seguridad XSS).
+        f'  <p style="margin:0 0 8px 0;">{instr}</p>'                                     # Instrucción corta.
+        f'  <p style="font-size:24px;letter-spacing:1px;word-break:break-all;'
+        f'            background:#F1F5F9;border:1px solid #E2E8F0;border-radius:8px;'
+        f'            padding:12px 16px;display:inline-block;">'
+        f'    <strong>{html.escape(guest_code)}</strong>'                                 # Código destacado y escapado.
+        f'  </p>'
+        f'  {cta_html}'                                                                   # Inserta CTA si existe.
+        f'  <p style="margin-top:20px;color:#475569;font-size:14px;">'
+        f'    Daniela & Cristian'
+        f'  </p>'
+        f'</div>'
+    )
+
+    # ----------------------------------
+    # Versión de texto plano (fallback para clientes sin HTML)
+    # ----------------------------------
+    if lang_code == "es":                                                                 # Texto plano ES.
+        text_fallback = (
+            f"Hola {guest_name}\n\n"
+            f"Tu código de invitación es: {guest_code}\n\n"
+            f"{instr}\n"
+            f"{('Login: ' + PUBLIC_LOGIN_URL) if PUBLIC_LOGIN_URL else ''}\n"
+        )
+    elif lang_code == "ro":                                                               # Texto plano RO.
+        text_fallback = (
+            f"Bună {guest_name}\n\n"
+            f"Codul tău de invitație este: {guest_code}\n\n"
+            f"{instr}\n"
+            f"{('Autentificare: ' + PUBLIC_LOGIN_URL) if PUBLIC_LOGIN_URL else ''}\n"
+        )
+    else:                                                                                 # Texto plano EN (fallback por defecto).
+        text_fallback = (
+            f"Hi {guest_name}\n\n"
+            f"Your invitation code is: {guest_code}\n\n"
+            f"{instr}\n"
+            f"{('Login: ' + PUBLIC_LOGIN_URL) if PUBLIC_LOGIN_URL else ''}\n"
+        )
+
+    # ----------------------------------
+    # Envío (helper HTML + texto)
+    # ----------------------------------
+    return send_email_html(                                                               # Llama al helper central de envío.
+        to_email=to_email,                                                                # Correo de destino.
+        subject=subject,                                                                  # Asunto i18n.
+        html_body=html_body,                                                              # Cuerpo HTML.
+        text_fallback=text_fallback,                                                      # Alternativa en texto plano.
+        to_name=guest_name                                                                # Nombre del invitado para personalizar encabezados.
+    )                                                                                     # Devuelve True/False según resultado.
+
 
 def send_confirmation_email(to_email: str, language: str | Enum, summary: dict) -> bool:
     """Envía correo de confirmación de RSVP en HTML con resumen (i18n, seguro contra XSS)."""  # Docstring.

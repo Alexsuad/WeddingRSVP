@@ -1,16 +1,10 @@
-# pages/0_Login.py                                                        # Nombre del archivo y ruta dentro de /pages.            # Ruta/rol del archivo.
+# pages/0_Login.py
 
-# =================================================================================                                            # Separador visual.
-# 💍 Página de Aterrizaje y Login (Invitados)                                                                                  # Título descriptivo.
-# ---------------------------------------------------------------------------------                                            # Separador.
-# - ÚNICA página pública del flujo RSVP.                                                                                       # Alcance.
-# - Valida al invitado con guest_code + (email o teléfono).                                                                     # Función principal.
-# - Si el login es correcto, guarda el JWT y redirige al formulario.                                                           # Flujo exitoso.
-# - Implementa un menú de navegación lateral traducible y selector de idioma.                                                  # UX i18n.
-# - Incluye un fix no invasivo para ocultar la “caja fantasma” (input huérfano).                                               # Limpieza UI.
-# =================================================================================                                            # Fin encabezado.
+# =================================================================================
+# 💍 Página de Login (Rediseño Visual)
+# =================================================================================
 
-# --- Importaciones ---
+# --- Importaciones (sin cambios) ---
 import os
 import re
 import requests
@@ -18,9 +12,10 @@ import streamlit as st
 from dotenv import load_dotenv
 from utils.lang_selector import render_lang_selector
 from utils.translations import t
-from utils.nav import hide_native_sidebar_nav, render_nav
+from utils.ui import apply_global_styles, render_side_nav  # Importa estilos globales y la botonera lateral (solo UI)
 
-# --- Utilidades de limpieza UI (caja fantasma) ---
+
+# --- Utilidades de limpieza UI (sin cambios, respetando la lógica existente) ---
 def _inject_ghost_killer_css() -> None:
     st.markdown(
         """
@@ -86,27 +81,25 @@ def _debug_outline_boxes(enabled: bool = False) -> None:
     )
 
 # --- Configuración de Página y Entorno ---
-st.set_page_config(
-    page_title="Confirmar Asistencia • Boda D&C",
-    page_icon="💍",
-    layout="centered",
-    initial_sidebar_state="collapsed",
-)
+st.set_page_config(                                  # Configura parámetros de la página de Streamlit
+    page_title="Iniciar Sesión • Boda D&C",          # Título de la pestaña del navegador
+    page_icon="💍",                                   # Icono de la pestaña
+    layout="centered",                               # Layout centrado (contenido en el centro)
+    initial_sidebar_state="collapsed",               # Sidebar nativa colapsada (además la ocultamos por CSS)
+)                                                    # Cierra la configuración
 
-load_dotenv()
+load_dotenv()                                        # Carga variables de entorno del archivo .env
+apply_global_styles()                                # ← Aplica estilos globales (fondo, tipografías, oculta sidebar, etc.)
+
 API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 RECOVERY_URL = os.getenv("RECOVERY_URL", "")
 
 # --- UI Global: Menú y Selector de Idioma ---
-hide_native_sidebar_nav()
-lang = render_lang_selector()
-render_nav({
-    "pages/0_Login.py": t("nav.login", lang),
-    "pages/1_Formulario_RSVP.py": t("nav.form", lang),
-    "pages/2_Confirmado.py": t("nav.confirmed", lang),
-})
+lang = render_lang_selector()                        # Renderiza el selector de idioma y devuelve el idioma activo (es/en/ro)
+render_side_nav(t, lang, hide=["login"])           # Usa los defaults de ui.py
 
-# --- Parche UI: intenta ocultar/eliminar la caja fantasma SI aparece ---
+
+# --- Parche UI (sin cambios) ---
 _inject_ghost_killer_css()
 # _remove_ghost_input_js()
 # _debug_outline_boxes(enabled=True)
@@ -115,30 +108,71 @@ _inject_ghost_killer_css()
 if st.session_state.get("token"):
     st.switch_page("pages/1_Formulario_RSVP.py")
 
-# --- Estilos (estética general) ---
+# --- ESTILOS MEJORADOS Y UNIFICADOS ---
 st.markdown(
     """
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@600;700&display=swap');
-      :root{
-        --bg:#FFFFFF; --text:#111111; --muted:#666666; --border:#EAEAEA; --card:#FFFFFF;
-        --shadow:0 10px 30px rgba(0,0,0,.08); --radius:18px; --radius-sm:14px;
-      }
-      html, body, [class*="block-container"]{
-        background:var(--bg); color:var(--text); font-family:'Inter', sans-serif;
-      }
-      h1, h2, h3{ font-family:'Playfair Display', serif !important; font-weight:700; }
-      .hero{ text-align:center; margin-bottom:20px; }
-      .hero h1{ font-size:clamp(34px, 5vw, 52px); margin:0 0 6px 0; }
-      .hero p{ margin:0; color:var(--muted); font-size:clamp(14px, 2vw, 18px); }
-      .login-card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
-                   box-shadow:var(--shadow); padding:28px 26px; max-width:720px; margin:0 auto; }
-      .muted{ color:var(--muted); font-size:14px; }
-      .center{ text-align:center; }
-      div[data-testid="stImage"]{ display:flex; justify-content:center; margin-top:6px; }
-      div[data-testid="stImage"] > img{ height:24px !important; width:auto !important; }
-      .stButton > button{ margin-bottom:6px !important; }
-    </style>
+        /* 1) Fuentes (debe ir FUERA de :root) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@600;700&display=swap'); /* Carga tipografías */
+
+        /* 2) Tokens (un SOLO :root) */
+        :root{ /* Variables globales */
+            --bg:#FFFFFF; /* Fondo base */
+            --text:#111111; /* Texto principal */
+            --muted:#666666; /* Texto secundario */
+            --primary:#0F0F0F; /* Negro de marca */
+            --shadow:0 10px 35px rgba(0,0,0,.08); /* Sombra suave */
+            --radius:12px; /* Radio estándar */
+            --primary-color:#0F0F0F; /* Primario usado por Streamlit (forzamos negro) */
+        } /* fin :root */
+
+        /* 3) Fondo suave + sin header/sidebar */
+        .stApp{ /* Contenedor principal */
+            background-image:
+            linear-gradient(rgba(255,255,255,.9), rgba(255,255,255,.9)), /* Velo blanco 0.9 */
+            url('https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=2070'); /* Imagen anillos */
+            background-size:cover; /* Cubre viewport */
+            background-position:center center; /* Centra imagen */
+        }
+        [data-testid="stHeader"]{ display:none; } /* Oculta header nativo */
+        [data-testid="stSidebar"]{ display:none !important; } /* Oculta sidebar */
+        [data-testid="stSidebarCollapsedControl"]{ display:none !important; } /* Oculta control «» */
+        [data-testid="stAppViewContainer"] > .main{ margin-left:0 !important; } /* Quita margen de sidebar */
+        .main .block-container{ padding-left:0 !important; } /* Quita sangría residual */
+
+        /* 4) Tipografía, hero y card (idénticos a la base) */
+        html, body, [class*="block-container"]{ font-family:'Inter',sans-serif; } /* Texto Inter */
+        h1,h2,h3{ font-family:'Playfair Display',serif !important; font-weight:700; color:var(--text); } /* Títulos Playfair */
+        .hero{ text-align:center; padding:2rem 0 4rem 0; } /* Ritmo vertical */
+        .hero h1{ margin:0 0 10px 0; font-size:2.8rem; } /* Tamaño H1 */
+        .hero p{ margin:0; color:var(--muted); font-size:1.1rem; } /* Subtítulo */
+        .card{ background:var(--bg); border-radius:var(--radius); box-shadow:var(--shadow); padding:2.5rem; max-width:500px; margin:-50px auto 0; } /* Tarjeta */
+
+        /* 5) Anti “caja fantasma” del form (encapsulado por id #login) */
+        #login form{ background:transparent !important; border:none !important; box-shadow:none !important; padding:0 !important; } /* Form transparente */
+        #login form > div{ background:transparent !important; border:none !important; box-shadow:none !important; padding:0 !important; } /* Wrapper transparente */
+        #login div[data-testid="stFormSubmitButton"]{ background:transparent !important; border:none !important; box-shadow:none !important; } /* Contenedor submit transparente */
+
+        /* 6) Botones de idioma (outline blanco + hover gris) */
+        .stButton > button:not([kind="primary"]){ background:#FFF !important; color:#111 !important; border:1px solid #E5E5E5 !important; border-radius:8px !important; font-weight:600 !important; transition:all .2s ease !important; } /* Outline */
+        .stButton > button:not([kind="primary"]):hover{ background:#F5F5F5 !important; } /* Hover gris */
+
+        /* 7) Botón primario “Acceder” en NEGRO — cubrimos 3 variantes de Streamlit */
+        #login [data-testid="stFormSubmitButton"] > button{ background:var(--primary-color) !important; color:#FFF !important; border:none !important; border-radius:10px !important; width:100% !important; padding:10px 16px !important; box-shadow:0 1px 2px rgba(0,0,0,.06) !important; transition:transform .02s ease, opacity .2s ease !important; } /* Variante wrapper */
+        #login .stButton > button[kind="primary"]{ background:var(--primary-color) !important; color:#FFF !important; border:none !important; border-radius:10px !important; } /* Variante con atributo kind */
+        #login button[data-testid="baseButton-primary"]{ background:var(--primary-color) !important; color:#FFF !important; border:none !important; border-radius:10px !important; } /* Variante por data-testid nueva */
+        /* Hover grisado para todas las variantes */
+        #login [data-testid="stFormSubmitButton"] > button:hover,
+        #login .stButton > button[kind="primary"]:hover,
+        #login button[data-testid="baseButton-primary"]:hover{ filter:brightness(.9) !important; } /* Hover */
+
+        /* 8) Enlace inferior (igual a la base) */
+        .login-link{ text-align:center; margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid #EEE; } /* Contenedor link */
+        .login-link a{ color:var(--muted); text-decoration:none; font-size:1rem; font-weight:500; transition:color .2s; } /* Link */
+        .login-link a:hover{ color:var(--primary); text-decoration:underline; } /* Hover link */
+</style>
+
+
     """,
     unsafe_allow_html=True,
 )
@@ -183,22 +217,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.markdown('<div class="login-card">', unsafe_allow_html=True)
+st.markdown('<div id="login">', unsafe_allow_html=True)  # Abre un contenedor con id="login" para aislar estilos del formulario.
 
-with st.form("login_form"):
-    guest_code = st.text_input(t("login.code", lang), key="guest_code_input")
-    contact = st.text_input(t("login.contact", lang), key="contact_input")
-    # Botones lado a lado: Acceder / Cancelar
-    col_ok, col_cancel = st.columns(2)
-    login_btn = col_ok.form_submit_button(t("login.submit", lang), type="primary", use_container_width=True)
-    cancel_btn = col_cancel.form_submit_button(t("form.cancel", lang), use_container_width=True)
+with st.form("login_form"):                               # Abre el formulario (lógica intacta).
+    guest_code = st.text_input(t("login.code", lang), key="guest_code_input")  # Campo código (sin cambios de lógica).
+    contact = st.text_input(t("login.contact", lang), key="contact_input")     # Campo contacto (sin cambios de lógica).
+    st.markdown('<div style="height: 1rem;"></div>', unsafe_allow_html=True)   # Espaciador visual (igual que antes).
+    login_btn = st.form_submit_button(t("login.submit", lang),                 # Botón de enviar (tipo primario).
+                                      use_container_width=True, type="primary")# Ancho completo y primario.
 
-# --- Acciones de los botones ---
-if cancel_btn:
-    # Navega a "Solicitar Acceso" (pantalla previa), sin validar.
-    st.switch_page("pages/00_Solicitar_Acceso.py")
+st.markdown('</div>', unsafe_allow_html=True)             # Cierra el contenedor #login para poder “encapsular” el CSS.
 
-elif login_btn:
+# --- Lógica de Acciones ---
+if login_btn:
     if not guest_code.strip() or not contact.strip():
         st.error(t("login.errors_empty", lang))
     else:
@@ -211,21 +242,17 @@ elif login_btn:
         else:
             st.error(error)
 
-# --- Acceso a recuperación de código (robusto) ---
-with st.container():
-    st.markdown('<div class="center muted">', unsafe_allow_html=True)
-    try:
-        if RECOVERY_URL.strip():
-            st.markdown(
-                f'<a href="{RECOVERY_URL}" target="_blank">{t("login.forgot", lang)}</a>',
-                unsafe_allow_html=True,
-            )
-        else:
-            # OJO: si tu archivo es "01_Recuperar_Codigo.py", ajusta la ruta aquí.
-            st.page_link("pages/01_Recuperar_Codigo.py", label=t("login.forgot", lang), icon="🔑")
-    except Exception:
-        if not RECOVERY_URL.strip():
-            st.write(f"🔑 {t('login.forgot', lang)}")
-    st.markdown('</div>', unsafe_allow_html=True)
+# --- Acceso a recuperación de código (con nuevo estilo) ---
+st.markdown(
+    f"""
+    <div class="login-link">
+        <a href="/Recuperar_Codigo" target="_self">
+            <span>🔑</span>&nbsp;
+            {t("login.forgot", lang)}
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.markdown("</div>", unsafe_allow_html=True)

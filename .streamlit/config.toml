@@ -1,10 +1,12 @@
-# .streamlit/config.toml  # Archivo de configuración de tema para Streamlit.
+# .streamlit/config.toml
+# Tema base para TODA la app (colores por defecto). El CSS seguirá afinando el look.
 
-[theme]  # Sección de tema de Streamlit.
-base="light"  # Usa tema claro como base.
-primaryColor="#0F0F0F"  # Negro corporativo para acentos (botones/links).
-backgroundColor="#FFFFFF"  # Fondo general blanco.
-secondaryBackgroundColor="#F7F7F7"  # Fondo para tarjetas/containers.
-textColor="#111111"  # Texto principal casi negro.
-font="sans serif"  # Fuente sans por defecto (combinaremos con CSS inyectado).
+[theme]
+base = "light"                 # Modo claro como base
+primaryColor = "#0F0F0F"       # Negro para botones/enlaces primarios (coincide con --primary)
+backgroundColor = "#FFFFFF"    # Fondo general blanco (la imagen de fondo va por CSS)
+secondaryBackgroundColor = "#FFFFFF"  # Fondos de contenedores/tarjetas (dejamos blanco para no pelear con el CSS)
+textColor = "#111111"          # Texto principal casi negro
+font = "sans serif"            # Tipografía base; cargamos Inter por CSS
+
 

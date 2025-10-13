@@ -23,7 +23,8 @@ from sqlalchemy.orm import Session                             # Sesión de SQLA
 # ---------------------------------------------------------------------------------                                                                 # Separador.
 from app.db import SessionLocal                # Fábrica de sesiones de BD.                                                                        # Import: SessionLocal.
 from app import models, schemas, auth, mailer  # Modelos ORM, Schemas Pydantic, utilidades de autenticación y mailer.                           # Import: modelos, schemas, auth, mailer.
-from app.models import InviteTypeEnum          # Enum para diferenciar ceremonia vs ceremonia+recepción.                                          # Import: enum de invitación.
+from app.models import InviteTypeEnum          # Enum para diferenciar ceremonia vs ceremonia+recepción. 
+from sqlalchemy.exc import IntegrityError      # Import: enum de invitación.
 
 # 🧍‍♂️ Helper para enmascarar correos electrónicos                                                                                                  # Helper: enmascarar email.
 # ---------------------------------------------------------------------------------                                                                 # Separador.
@@ -215,9 +216,19 @@ def update_my_rsvp(                            # Endpoint: actualiza la confirma
     # 🔢 7) Actualizar contadores y guardar cambios.                                                                                              # Paso 7: contadores + commit.
     current_guest.num_adults = adults                                # Actualiza el total de adultos.                                              # Set adultos.
     current_guest.num_children = children                            # Actualiza el total de niños.                                                # Set niños.
-    db.commit()                                                      # Persiste todos los cambios (titular + acompañantes + contadores).           # Commit BD.
-    db.refresh(current_guest)                                        # Refresca el objeto ORM con datos confirmados.                               # Refresh ORM.
-
+    try:
+        db.commit()
+        db.refresh(current_guest)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error_code": "EMAIL_OR_PHONE_CONFLICT",
+                "message_key": "form.email_or_phone_conflict"
+            }
+        )
+        
     logger.info(
         "RSVP: confirmado | guest_id=%s | code=%s | email=%s | adults=%s | children=%s",
         current_guest.id, current_guest.guest_code, _mask_email(current_guest.email),
