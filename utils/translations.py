@@ -21,12 +21,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "nav.confirmed": "Confirmado",
         "nav.request": "Solicitar Acceso",
         "nav.recover": "Recuperar Código",
+        "nav.login_prompt": "Iniciar sesión",
+        "nav.home": "Inicio",
 
         # --- Login ---
         "login.title": "💍 Confirmar asistencia",
-        "login.intro": "¡Qué alegría tenerte aquí! Ingresa los datos de tu invitación para continuar.",
+        "login.intro": "¡Qué alegría que estés aquí! Ingresa los datos de tu invitación para continuar.",
         "login.code": "Código de invitación",
-        "login.contact": "Email o teléfono de contacto",
+        "login.contact": "Email o Teléfono (Ej: 573101234567)",
         "login.submit": "Acceder",
         "login.errors_empty": "Por favor, completa ambos campos.",
         "login.errors_auth": "Código, email o teléfono no coinciden.",
@@ -36,7 +38,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "login.server_err": "No pudimos validar en este momento. Inténtalo de nuevo en unos segundos.",
 
         # --- Solicitar Acceso ---
-        "request.title": "🔑 Solicita tu acceso",
+        "request.title": "Solicita tu acceso",
         "request.intro": "Para identificarte, indícanos tu nombre completo, los últimos 4 dígitos de tu teléfono y el email donde quieres recibir tu enlace.",
         "request.full_name": "Tu nombre completo",
         "request.phone_last4": "Últimos 4 dígitos de tu teléfono",
@@ -44,12 +46,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "request.email": "Correo electrónico",
         "request.submit": "Solicitar acceso",
         "request.consent": "Acepto recibir comunicaciones de la boda por correo electrónico.",
-        "request.success": "¡Listo! Te enviamos un enlace a tu correo. Revisa tu bandeja (y Spam/Promociones).",
+        "request.success": "¡Listo! Te enviamos un enlace a tu correo. Revisa tu bandeja de entrada (y Spam/Promociones).",
         "request.error": "No pudimos procesar tu solicitud. Verifica los datos e inténtalo de nuevo.",
+        "request.not_found_message": "❌ No pudimos verificar tus datos con la invitación. Revísalos e inténtalo de nuevo.",
         "request.resend": "¿No te llegó el correo? Haz clic aquí para reenviar.",
         "request.invalid_email": "El email no parece válido.",
         "request.invalid_phone4": "Debes ingresar exactamente 4 dígitos.",
         "request.success_message_neutral": "Si los datos coinciden con tu invitación, recibirás un enlace en tu correo. Revisa tu bandeja de entrada y también Spam/Promociones.",
+        "request.success_message_ok": "✅ Datos verificados. Te enviamos un enlace a tu correo. Revisa Bandeja/Spam/Promociones.",
         "request.invalid_name": "El nombre debe tener al menos 3 caracteres.",
         "request.consent_required": "Debes aceptar el consentimiento para continuar.",
 
@@ -61,13 +65,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.no": "No",
         "form.select_option": "Elige una opción para continuar.",
         "form.no_attend_short": "Gracias por avisarnos. ¡Te echaremos de menos! 😔",
-        "form.generic_error": "Ocurrió un error al guardar tu respuesta. Inténtalo más tarde.",
+        "form.generic_error": "Algo salió mal al guardar tu respuesta. Inténtalo más tarde.",
         "form.sending": "Enviando…",
         "form.submit": "Enviar respuesta",
         "form.cancel": "Cancelar",
         "form.net_err": "No pudimos contactar el servidor. Inténtalo de nuevo.",
         "form.session_expired": "Tu sesión ha expirado. Por favor, inicia sesión otra vez.",
         "form.load_error": "No pudimos cargar tus datos en este momento.",
+        "form.email_or_phone_conflict": "El correo electrónico o el teléfono proporcionado ya está en uso por otro invitado.",
 
         # --- Invitación / horarios ---
         "form.invite_title": "Tu invitación",
@@ -82,7 +87,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.contact_caption": "Usaremos estos datos para enviarte la confirmación y recordatorios. 💌",
         "form.field_email": "Email",
         "form.field_phone": "Teléfono (Ej: +573101234567)",
-        "form.contact_required_one": "Por favor, proporciona al menos un email o un teléfono.",
+        "form.contact_required_one": "Por favor, indícanos al menos un correo o un teléfono.",
         "form.contact_invalid_email": "El formato del email no es válido.",
         "form.contact_invalid_phone": "El teléfono debe incluir el código de país. Ej.: +573101234567",
 
@@ -114,7 +119,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         # --- Página de Confirmado ---
         "ok.title": "¡Confirmación recibida!",
         "ok.msg_yes": "¡Gracias por confirmar! Tu respuesta ha sido guardada.",
-        "ok.msg_no": "Hemos registrado que no podrás asistir. ¡Te echaremos de menos!",
+        "ok.msg_no": "Hemos registrado que no podrás asistir. ¡Te echaremos de menos! 💕",
         "ok.summary": "Este es un resumen de tu confirmación:",
         "ok.main_guest": "Invitado principal",
         "ok.adults_children": "Adultos / Niños",
@@ -134,6 +139,39 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "invite.scope.full": "Estás invitado/a a la **Ceremonia** y a la **Recepción**.",
         "invite.scope.reception": "Estás invitado/a a la **Recepción**.",
         "invite.times.hint": "Ceremonia {ceremony_time} · Recepție {reception_time}",
+        
+        # --- Opciones / catálogos UI ---
+        "options.allergen.gluten": "Gluten",
+        "options.allergen.dairy": "Lácteos",
+        "options.allergen.nuts": "Frutos secos",
+        "options.allergen.seafood": "Mariscos",
+        "options.allergen.eggs": "Huevos",
+        "options.allergen.soy": "Soja",
+
+        "options.attendance.yes": "Sí",
+        "options.attendance.no": "No",
+        "options.attendance.maybe": "Tal vez",
+
+        "options.menu.beef": "Carne",
+        "options.menu.chicken": "Pollo",
+        "options.menu.fish": "Pescado",
+        "options.menu.veggie": "Vegetariano",
+        
+        # --- Recuperar código ---
+        "recover.title": "Recuperar tu código",
+        "recover.subtitle": "Ingresa tu email o teléfono usado en la invitación. Si estás en la lista, te enviaremos un mensaje.",
+        "recover.email": "Email (opcional)",
+        "recover.phone": "Teléfono (opcional)",
+        "recover.submit": "Solicitar recuperación",
+        "recover.success": "Si tu contacto está en la lista de invitados, recibirás un mensaje en breve.",
+        "recover.rate_limited": "Has realizado demasiados intentos. Inténtalo nuevamente en ~{retry}.",
+        "recover.invalid": "Solicitud inválida. Verifica los datos e inténtalo de nuevo.",
+        "recover.generic": "No pudimos procesar la solicitud en este momento. Inténtalo más tarde.",
+        "recover.network": "No hay conexión con el servidor. Detalle: {err}",
+        "recover.back": "⬅️ Volver al inicio",
+        "recover.go_rsvp": "Ir al formulario RSVP",
+
+
     },
 
     # ==================================================
@@ -146,12 +184,15 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "nav.confirmed": "Confirmat",
         "nav.request": "Solicită Acces",
         "nav.recover": "Recuperează Codul",
+        "nav.login_prompt": "Autentificare",
+        "nav.home": "Acasă",
+        
 
         # --- Login ---
         "login.title": "💍 Confirmă prezența",
         "login.intro": "Ne bucurăm că ești aici! Introdu datele invitației pentru a continua.",
         "login.code": "Cod invitație",
-        "login.contact": "Email sau telefon",
+        "login.contact": "Email sau telefon (Ex: 40722123456)",
         "login.submit": "Continuă",
         "login.errors_empty": "Te rugăm să completezi ambele câmpuri.",
         "login.errors_auth": "Cod, email sau telefon nu corespund.",
@@ -161,7 +202,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "login.server_err": "Nu am putut valida acum. Te rugăm să încerci din nou în scurt timp.",
 
         # --- Cere Accesul ---
-        "request.title": "🔑 Cere accesul",
+        "request.title": "Solicită accesul",
         "request.intro": "Pentru identificare, te rugăm să ne spui numele complet, ultimele 4 cifre ale telefonului și emailul unde vrei să primești linkul.",
         "request.full_name": "Numele tău complet",
         "request.phone_last4": "Ultimele 4 cifre ale telefonului",
@@ -171,10 +212,12 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "request.consent": "Sunt de acord să primesc comunicări legate de nuntă prin email.",
         "request.success": "Gata! Ți-am trimis un link pe email. Verifică Inbox și Spam/Promotions.",
         "request.error": "Nu am putut procesa cererea. Verifică datele și încearcă din nou.",
+        "request.not_found_message": "❌ Nu am putut verifica datele tale cu invitația. Te rugăm să le verifici și să încerci din nou.",
         "request.resend": "Nu ai primit emailul? Click aici pentru retrimitere.",
         "request.invalid_email": "Emailul nu pare valid.",
         "request.invalid_phone4": "Introdu exact 4 cifre.",
         "request.success_message_neutral": "Dacă datele se potrivesc invitației, vei primi un link pe email. Verifică Inbox și Spam/Promotions.",
+        "request.success_message_ok": "✅ Datele au fost verificate. Ți-am trimis un link pe email. Verifică Inbox și Spam/Promotions.",
         "request.invalid_name": "Numele trebuie să aibă cel puțin 3 caractere.",
         "request.consent_required": "Trebuie să accepți consimțământul pentru a continua.",
 
@@ -193,6 +236,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.net_err": "Nu se poate contacta serverul. Încearcă din nou.",
         "form.session_expired": "Sesiunea a expirat. Te rugăm să te autentifici din nou.",
         "form.load_error": "A apărut o eroare la încărcarea datelor tale.",
+        "form.email_or_phone_conflict": "Adresa de e-mail sau numărul de telefon furnizat este deja folosit de un alt invitat.",
 
         # --- Invitație / program ---
         "form.invite_title": "Invitația ta",
@@ -204,7 +248,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
         # --- Contact ---
         "form.contact_title": "Date de contact",
-        "form.contact_caption": "Vom folosi aceste date pentru confirmare și remindere. 💌",
+        "form.contact_caption": "Vom folosi aceste date pentru confirmare și pentru memento-uri. 💌",
         "form.field_email": "Email",
         "form.field_phone": "Telefon (Ex: +40722123456)",
         "form.contact_required_one": "Te rugăm să oferi cel puțin un email sau un telefon.",
@@ -260,6 +304,37 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "invite.scope.reception": "Ești invitat(ă) la **Recepție**.",
         "invite.times.hint": "Ceremonie {ceremony_time} · Recepție {reception_time}",
         
+        # --- Opțiuni / cataloage UI ---
+        "options.allergen.gluten": "Gluten",
+        "options.allergen.dairy": "Lactate",
+        "options.allergen.nuts": "Nuci",
+        "options.allergen.seafood": "Fructe de mare",
+        "options.allergen.eggs": "Ouă",
+        "options.allergen.soy": "Soia",
+
+        "options.attendance.yes": "Da",
+        "options.attendance.no": "Nu",
+        "options.attendance.maybe": "Poate",
+
+        "options.menu.beef": "Vită",
+        "options.menu.chicken": "Pui",
+        "options.menu.fish": "Pește",
+        "options.menu.veggie": "Vegetarian",
+
+        # --- Recuperare cod ---
+        "recover.title": "Recuperează-ți codul",
+        "recover.subtitle": "Introdu emailul sau telefonul folosit în invitație. Dacă ești în listă, vei primi un mesaj.",
+        "recover.email": "Email (opțional)",
+        "recover.phone": "Telefon (opțional)",
+        "recover.submit": "Solicită recuperarea",
+        "recover.success": "Dacă datele tale se află în lista de invitați, vei primi în curând un mesaj.",
+        "recover.rate_limited": "Prea multe încercări. Încearcă din nou peste ~{retry}.",
+        "recover.invalid": "Cerere invalidă. Verifică datele și încearcă din nou.",
+        "recover.generic": "Nu am putut procesa cererea acum. Încearcă mai târziu.",
+        "recover.network": "Nu se poate contacta serverul. Detalii: {err}",
+        "recover.back": "⬅️ Înapoi la început",
+        "recover.go_rsvp": "Mergi la formularul RSVP",
+
     },
 
     # ==================================================
@@ -272,24 +347,27 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "nav.confirmed": "Confirmed",
         "nav.request": "Request Access",
         "nav.recover": "Recover Code",
+        "nav.login_prompt": "Log in",
+        "nav.home": "Home",
+
 
         # --- Login ---
         "login.title": "💍 Confirm attendance",
         "login.intro": "We’re so happy you’re here! Enter your invitation details to continue.",
         "login.code": "Invitation code",
-        "login.contact": "Email or phone",
+        "login.contact": "Email or phone (E.g. 447911123456",
         "login.submit": "Continue",
         "login.errors_empty": "Please complete both fields.",
         "login.errors_auth": "Code, email or phone don’t match.",
         "login.validating": "Validating…",
         "login.success": "All set! Taking you to the form…",
         "login.forgot": "Forgot your code? Click here",
-        "login.server_err": "We couldn’t validate right now. Please try again in a moment.",
+        "login.server_err": "We couldn’t verify your details right now. Please try again in a moment.",
 
         # --- Request Access ---
-        "request.title": "🔑 Request access",
+        "request.title": "Request access",
         "request.intro": "To identify you, please share your full name, the last 4 digits of your phone, and the email where you’d like to receive your access link.",
-        "request.full_name": "Yourull name",
+        "request.full_name": "Your full name",
         "request.phone_last4": "Last 4 digits of your phone",
         "request.phone_last4_placeholder": "E.g., 5678",
         "request.email": "Email address",
@@ -297,12 +375,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "request.consent": "I agree to receive wedding communications by email.",
         "request.success": "Done! We’ve sent a link to your email. Check Inbox and Spam/Promotions.",
         "request.error": "We couldn’t process your request. Please verify your details and try again.",
+        "request.not_found_message": "❌ We couldn’t verify your data with the invitation. Please check and try again.",
         "request.resend": "Didn’t get the email? Click here to resend.",
         "request.invalid_email": "The email doesn’t look valid.",
         "request.invalid_phone4": "Enter exactly 4 digits.",
         "request.success_message_neutral": "If your details match an invitation, you'll receive a link by email. Check Inbox and Spam/Promotions.",
+        "request.success_message_ok": "✅ Data verified. We’ve sent you a link to your email. Please check Inbox/Spam/Promotions.",
         "request.invalid_name": "The name must have at least 3 characters.",
-        "request.consent_required": "You must accept the consent to continue.",
+        "request.consent_required": "Please accept the consent to continue.",
 
         # --- RSVP Form ---
         "form.hi": "Hi",
@@ -319,6 +399,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.net_err": "We couldn’t reach the server. Please try again.",
         "form.session_expired": "Your session has expired. Please log in again.",
         "form.load_error": "We couldn’t load your data at this time.",
+        "form.email_or_phone_conflict": "The email or phone number provided is already in use by another guest.",
 
         # --- Invitation / times ---
         "form.invite_title": "Your invitation",
@@ -335,7 +416,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.field_phone": "Phone (E.g. +447911123456)",
         "form.contact_required_one": "Please provide at least an email or a phone number.",
         "form.contact_invalid_email": "The email doesn’t look valid.",
-        "form.contact_invalid_phone": "Phone must include the country code. E.g., +447911123456",
+        "form.contact_invalid_phone": "Please include the country code in your phone number E.g., +447911123456",
 
         # --- Allergies (main guest) ---
         "form.titular_allergies": "Allergies or restrictions (main guest)",
@@ -385,6 +466,39 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "invite.scope.full": "You are invited to the **Ceremony** and the **Reception**.",
         "invite.scope.reception": "You are invited to the **Reception**.",
         "invite.times.hint": "Ceremony {ceremony_time} · Reception {reception_time}",
+        
+        # --- Options / UI catalogs ---
+        "options.allergen.gluten": "Gluten",
+        "options.allergen.dairy": "Dairy",
+        "options.allergen.nuts": "Tree nuts",
+        "options.allergen.seafood": "Seafood",
+        "options.allergen.eggs": "Eggs",
+        "options.allergen.soy": "Soy",
+
+        "options.attendance.yes": "Yes",
+        "options.attendance.no": "No",
+        "options.attendance.maybe": "Maybe",
+
+        "options.menu.beef": "Beef",
+        "options.menu.chicken": "Chicken",
+        "options.menu.fish": "Fish",
+        "options.menu.veggie": "Vegetarian",
+        
+        # --- Recover Code ---
+        "recover.title": "Recover your code",
+        "recover.subtitle": "Enter the email or phone used in your invitation. If you are on the list, we will send you a message.",
+        "recover.email": "Email (optional)",
+        "recover.phone": "Phone (optional)",
+        "recover.submit": "Request recovery",
+        "recover.success": "If your contact is on the guest list, you will receive a message shortly.",
+        "recover.rate_limited": "Too many attempts. Please try again in ~{retry}.",
+        "recover.invalid": "Invalid request. Please check the data and try again.",
+        "recover.generic": "We couldn't process your request at the moment. Please try again later.",
+        "recover.network": "Cannot reach the server. Details: {err}",
+        "recover.back": "⬅️ Back to home",
+        "recover.go_rsvp": "Go to RSVP form",
+
+
     },
 }
 
