@@ -20,7 +20,7 @@ BG_URL      = os.getenv(                                                     # U
 
 if MAINTENANCE == "1":                                                       # Si el modo mantenimiento está activado…
     st.set_page_config(                                                      # Configura metadatos de la página (solo para el modo mantenimiento).
-        page_title="💍 Daniela & Cristian — Maintenance",                    # Título de la pestaña del navegador.
+        page_title="💍 Jenny & Cristian — Maintenance",                    # Título de la pestaña del navegador.
         page_icon="💍",                                                      # Ícono de la pestaña (anillo de boda).
         layout="centered"                                                    # Centra el contenido en pantalla.
     )                                                                        # Fin de set_page_config.
@@ -87,7 +87,7 @@ if MAINTENANCE == "1":                                                       # S
         <!-- Contenido de la tarjeta -->
         <div class="card">
           <div class="heart">💍</div>
-          <h1>Daniela & Cristian</h1>
+          <h1>Jenny & Cristian</h1>
           <p>We are preparing a special experience for you.</p>
           <p><em>Please come back soon to confirm your attendance.</em></p>
         </div>
@@ -101,7 +101,7 @@ if MAINTENANCE == "1":                                                       # S
 # ================================================================
 
 st.set_page_config(                                                          # Configura metadatos de la app cuando NO hay mantenimiento.
-    page_title="RSVP • Daniela & Cristian",                                  # Título consistente para el sistema RSVP.
+    page_title="RSVP • Jenny & Cristian",                                  # Título consistente para el sistema RSVP.
     layout="centered",                                                       # Layout centrado para foco en formularios.
     initial_sidebar_state="collapsed",                                       # Sidebar colapsado para una UI limpia.
 )                                                                            # Fin de configuración de página.

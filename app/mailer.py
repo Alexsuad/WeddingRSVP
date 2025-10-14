@@ -70,7 +70,7 @@ DRY_RUN = os.getenv("DRY_RUN", "1") == "1"
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
 FROM_EMAIL = os.getenv("EMAIL_FROM", "")
 RSVP_URL = os.getenv("RSVP_URL", "")
-EMAIL_SENDER_NAME = os.getenv("EMAIL_SENDER_NAME", "Daniela & Cristian")
+EMAIL_SENDER_NAME = os.getenv("EMAIL_SENDER_NAME", "Jenny & Cristian")
 TEMPLATES_DIR = (Path(__file__).parent / "templates" / "emails").resolve()
 PUBLIC_LOGIN_URL = os.getenv("PUBLIC_LOGIN_URL", "").strip()
 
@@ -155,9 +155,9 @@ SUBJECTS.setdefault("magic_link", {                                             
 })                                                                                    # Cierre setdefault.
 
 SUBJECTS.setdefault("confirmation", {                                                 # Asegura clave para confirmación de RSVP.
-    "es": "✅ Confirmación recibida • Boda Daniela & Cristian",                       # Español.
-    "ro": "✅ Confirmare înregistrată • Nunta Daniela & Cristian",                    # Rumano.
-    "en": "✅ RSVP received • Daniela & Cristian Wedding",                            # Inglés.
+    "es": "✅ Confirmación recibida • Boda Jenny & Cristian",                       # Español.
+    "ro": "✅ Confirmare înregistrată • Nunta Jenny & Cristian",                    # Rumano.
+    "en": "✅ RSVP received • Jenny & Cristian Wedding",                            # Inglés.
 })                                                                                    # Cierre setdefault para confirmación.
 
 # =================================================================================
@@ -171,7 +171,7 @@ TEMPLATES = {                                                                   
             "La fecha límite para confirmar es el {deadline}.\n\n"
             "{cta}\n\n"
             "¡Esperamos verte allí!\n\n"
-            "Un abrazo,\nDaniela & Cristian"
+            "Un abrazo,\nJenny & Cristian"
         ),
         "reminder_reception": (                                                       # Recordatorio solo recepción.
             "Hola {name},\n\n"
@@ -179,7 +179,7 @@ TEMPLATES = {                                                                   
             "La fecha límite para confirmar es el {deadline}.\n\n"
             "{cta}\n\n"
             "¡Nos encantaría celebrar contigo!\n\n"
-            "Un abrazo,\nDaniela & Cristian"
+            "Un abrazo,\nJenny & Cristian"
         ),
         "recovery": (                                                                 # Recuperación de código.
             "Hola {name},\n\n"
@@ -188,7 +188,7 @@ TEMPLATES = {                                                                   
             "Puedes usarlo junto con tu email o teléfono para iniciar sesión en el formulario.\n"
             "{cta}\n\n"
             "Si no solicitaste este mensaje, puedes ignorarlo.\n\n"
-            "Un abrazo,\nDaniela & Cristian"
+            "Un abrazo,\nJenny & Cristian"
         ),
         "cta": "👉 Confirma aquí: {url}",                                             # CTA de texto con URL.
         "confirmation": (                                                             # Confirmación de RSVP.
@@ -200,7 +200,7 @@ TEMPLATES = {                                                                   
             "{allergies}\n"
             "{notes}\n\n"
             "Te iremos informando con más detalles conforme se acerque la fecha.\n\n"
-            "Un abrazo,\nDaniela & Cristian"
+            "Un abrazo,\nJenny & Cristian"
         ),
     },
     "ro": {                                                                           # Rumano (completo).
@@ -210,7 +210,7 @@ TEMPLATES = {                                                                   
             "Data limită pentru confirmare este {deadline}.\n\n"
             "{cta}\n\n"
             "Sperăm să te vedem acolo!\n\n"
-            "Cu drag,\nDaniela & Cristian"
+            "Cu drag,\nJenny & Cristian"
         ),
         "reminder_reception": (
             "Bună {name},\n\n"
@@ -218,7 +218,7 @@ TEMPLATES = {                                                                   
             "Data limită pentru confirmare este {deadline}.\n\n"
             "{cta}\n\n"
             "Ne-ar plăcea să sărbătorim cu tine!\n\n"
-            "Cu drag,\nDaniela & Cristian"
+            "Cu drag,\nJenny & Cristian"
         ),
         "recovery": (
             "Bună {name},\n\n"
@@ -227,7 +227,7 @@ TEMPLATES = {                                                                   
             "Îl poți folosi împreună cu emailul sau telefonul pentru autentificare în formular.\n"
             "{cta}\n\n"
             "Dacă nu ai solicitat acest mesaj, îl poți ignora.\n\n"
-            "Cu drag,\nDaniela & Cristian"
+            "Cu drag,\nJenny & Cristian"
         ),
         "cta": "👉 Confirmă aici: {url}",                                             # CTA de texto con URL.
         "confirmation": (
@@ -239,7 +239,7 @@ TEMPLATES = {                                                                   
             "{allergies}\n"
             "{notes}\n\n"
             "Te vom ține la curent cu mai multe detalii pe măsură ce se apropie data.\n\n"
-            "Cu drag,\nDaniela & Cristian"
+            "Cu drag,\nJenny & Cristian"
         ),
     },
     "en": {                                                                           # Inglés (completo).
@@ -249,7 +249,7 @@ TEMPLATES = {                                                                   
             "The deadline to RSVP is {deadline}.\n\n"
             "{cta}\n\n"
             "We hope to see you there!\n\n"
-            "Best,\nDaniela & Cristian"
+            "Best,\nJenny & Cristian"
         ),
         "reminder_reception": (
             "Hi {name},\n\n"
@@ -257,7 +257,7 @@ TEMPLATES = {                                                                   
             "The deadline to RSVP is {deadline}.\n\n"
             "{cta}\n\n"
             "We would love to celebrate with you!\n\n"
-            "Best,\nDaniela & Cristian"
+            "Best,\nJenny & Cristian"
         ),
         "recovery": (
             "Hi {name},\n\n"
@@ -266,7 +266,7 @@ TEMPLATES = {                                                                   
             "Use it along with your email or phone to log in to the form.\n"
             "{cta}\n\n"
             "If you did not request this, you can ignore this message.\n\n"
-            "Best,\nDaniela & Cristian"
+            "Best,\nJenny & Cristian"
         ),
         "cta": "👉 Confirm here: {url}",                                              # CTA de texto con URL.
         "confirmation": (
@@ -278,7 +278,7 @@ TEMPLATES = {                                                                   
             "{allergies}\n"
             "{notes}\n\n"
             "We’ll keep you updated with more details as the date approaches.\n\n"
-            "Best,\nDaniela & Cristian"
+            "Best,\nJenny & Cristian"
         ),
     },
 }                                                                                     # Cierra TEMPLATES.
@@ -676,9 +676,9 @@ def send_guest_code_email(to_email: str, guest_name: str, guest_code: str, langu
     # Asuntos por idioma (mapa i18n)
     # -----------------------------
     subject_map = {                                           # Diccionario local con asunto por idioma.
-        "es": "Tu código de invitación • Boda Daniela & Cristian",   # ES.
-        "en": "Your invitation code • Daniela & Cristian Wedding",   # EN.
-        "ro": "Codul tău de invitație • Nunta Daniela & Cristian",   # RO.
+        "es": "Tu código de invitación • Boda Jenny & Cristian",   # ES.
+        "en": "Your invitation code • Jenny & Cristian Wedding",   # EN.
+        "ro": "Codul tău de invitație • Nunta Jenny & Cristian",   # RO.
     }
 
     subject = subject_map.get(lang_code, subject_map["en"])   # Usa el asunto del idioma; si faltara, cae a EN.
@@ -726,7 +726,7 @@ def send_guest_code_email(to_email: str, guest_name: str, guest_code: str, langu
         f'  </p>'
         f'  {cta_html}'                                                                   # Inserta CTA si existe.
         f'  <p style="margin-top:20px;color:#475569;font-size:14px;">'
-        f'    Daniela & Cristian'
+        f'    Jenny & Cristian'
         f'  </p>'
         f'</div>'
     )

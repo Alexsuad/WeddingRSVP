@@ -21,7 +21,7 @@ if not FROM_EMAIL:  # Comprueba que exista el remitente.
 
 # Construye el mensaje con subject, texto y HTML.
 message = Mail(  # Crea el objeto Mail para enviar por SendGrid.
-    from_email=From(FROM_EMAIL, "Daniela & Cristian"),  # Remitente con nombre “humano”.
+    from_email=From(FROM_EMAIL, "Jenny & Cristian"),  # Remitente con nombre “humano”.
     to_emails=TO_EMAIL,  # Destinatario de prueba.
     subject="Prueba aislada SendGrid (SDK) ✅",  # Asunto del correo.
     plain_text_content="Hola! Esta es una prueba aislada del backend RSVP usando el SDK de SendGrid.",  # Cuerpo en texto plano.

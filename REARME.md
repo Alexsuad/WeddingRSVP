@@ -1,4 +1,4 @@
-# 📑 Documento Maestro – RSVP Boda Daniela & Cristian
+# 📑 Documento Maestro – RSVP Boda Jenny & Cristian
 
 **Versión:** 6.1  
 **Fecha:** Septiembre 2025  
@@ -8,7 +8,7 @@
 
 ## 1. Objetivo General del Sistema
 
-Construir una solución híbrida y automatizada que permita a los invitados de la boda de Daniela y Cristian confirmar su asistencia de forma **segura**, **sencilla** y **multilenguaje**.
+Construir una solución híbrida y automatizada que permita a los invitados de la boda de Jenny y Cristian confirmar su asistencia de forma **segura**, **sencilla** y **multilenguaje**.
 
 El sistema combina:
 

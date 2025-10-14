@@ -35,21 +35,21 @@ BODIES = {                           # Cuerpos por idioma (texto plano).
         f"¡Nos encantaría contar contigo el {EVENT_DATE_HUMAN}! 🎉\n"
         f"Por favor confirma tu asistencia en {RSVP_URL}.\n\n"
         f"Tu código de invitación es: {code}\n\n"
-        f"Un abrazo,\nDaniela & Cristian"
+        f"Un abrazo,\nJenny & Cristian"
     ),
     "ro": lambda name, code: (
         f"Bună {name},\n\n"
         f"Ne-ar plăcea să fii alături de noi pe {EVENT_DATE_HUMAN}! 🎉\n"
         f"Te rugăm să îți confirmi prezența pe {RSVP_URL}.\n\n"
         f"Codul tău de invitație este: {code}\n\n"
-        f"Cu drag,\nDaniela & Cristian"
+        f"Cu drag,\nJenny & Cristian"
     ),
     "en": lambda name, code: (
         f"Hi {name},\n\n"
         f"We’d love to have you with us on {EVENT_DATE_HUMAN}! 🎉\n"
         f"Please RSVP at {RSVP_URL}.\n\n"
         f"Your invitation code is: {code}\n\n"
-        f"With love,\nDaniela & Cristian"
+        f"With love,\nJenny & Cristian"
     ),
 }
 

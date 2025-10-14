@@ -62,7 +62,7 @@ else:
     from app.db import log_db_path_on_startup                                                       # ✅ Importa la utilidad para loguear la ruta real de la BD.
 
     app = FastAPI(                                                                                  # Crea la instancia de la aplicación FastAPI.
-        title="API para la Boda de Daniela & Cristian",                                             # Título de la API (documentación OpenAPI).
+        title="API para la Boda de Jenny & Cristian",                                             # Título de la API (documentación OpenAPI).
         description="Backend para gestionar RSVP, login y lógica de invitados",                     # Descripción corta de la API.
         version="6.0.0",                                                                            # Versión de la API (para control de cambios).
     )                                                                                                # Cierra la creación de la app.

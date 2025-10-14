@@ -105,7 +105,7 @@ occupancy_pct = (attendees_confirmed / total_capacity * 100) if total_capacity e
 
 # 🎨 Encabezado e indicadores principales                                            # Cabecera visual.
 # ---------------------------------------------------------------------------------
-st.title("💍 Dashboard • Boda de Daniela & Cristian")  # Título principal del dashboard.
+st.title("💍 Dashboard • Boda de Jenny & Cristian")  # Título principal del dashboard.
 st.caption(f"Evento: {os.getenv('EVENT_DATE_HUMAN', '22 Mayo 2026')}")  # Fecha amigable desde .env (fallback por defecto).
 k1, k2, k3, k4, k5 = st.columns(5)  # Crea cinco columnas para KPIs.
 k1.metric("👥 Invitaciones", total_invites)  # Muestra total de invitaciones.

@@ -210,7 +210,7 @@ def api_login(guest_code: str, contact: str) -> tuple[str | None, str | None]:
 st.markdown(
     f"""
     <div class="hero">
-      <h1>Daniela &amp; Cristian</h1>
+      <h1>Jenny &amp; Cristian</h1>
       <p>{t("login.intro", lang)}</p>
     </div>
     """,
