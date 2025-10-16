@@ -700,16 +700,27 @@ def send_guest_code_email(to_email: str, guest_name: str, guest_code: str, langu
     # CTA opcional (enlace a login público si está configurado)
     # ----------------------------------
     cta_html = ""                                                                       # Inicializa CTA vacío por defecto.
-    if PUBLIC_LOGIN_URL:                                                                # Si hay una URL pública de login…
-        cta_html = (                                                                    # …construye un botón accesible (inline CSS).
-            f'<p style="margin-top:16px;">'
-            f'  <a href="{PUBLIC_LOGIN_URL}" '
-            f'     style="display:inline-block;padding:10px 16px;border-radius:8px;'
-            f'            background:#6D28D9;color:#fff;text-decoration:none;font-weight:600;">'
-            f'    {btn_label}'
-            f'  </a>'
-            f'</p>'
+    if PUBLIC_LOGIN_URL:                                                                 # Si hay URL pública definida…
+        from urllib.parse import urlparse, urlunparse, urlencode, parse_qsl              # Importa helpers para manipular querystring.
+        parts = list(urlparse(PUBLIC_LOGIN_URL))                                         # Descompone la URL base en partes (scheme, netloc, path, query, etc.).
+        q = dict(parse_qsl(parts[4]))                                                    # Convierte la query actual (si existe) en dict.
+
+        q["goto"] = "login"                                                              # Fuerza el deep-link hacia la página de Login en Streamlit.
+        q["lang"] = lang_code                                                            # Propaga el idioma del invitado (es/en/ro) para mantener coherencia visual.
+
+        parts[4] = urlencode(q)                                                          # Re-ensambla la query con los nuevos parámetros.
+        cta_url = urlunparse(parts)                                                      # Reconstruye la URL final con ?goto=login&lang=xx.
+
+        cta_html = (                                                                     # Construye el HTML del botón accesible (inline CSS).
+            f'<p style="margin-top:16px;">'                                              # Margen superior para respirar.
+            f'  <a href="{cta_url}" '                                                    # Usa la URL final con los parámetros de deep-link.
+            f'     style="display:inline-block;padding:10px 16px;border-radius:8px;'     # Botón con padding y bordes redondeados.
+            f'            background:#6D28D9;color:#fff;text-decoration:none;font-weight:600;">'  # Color, contraste y peso de fuente.
+            f'    {btn_label}'                                                           # Etiqueta i18n del botón (ES/EN/RO).
+            f'  </a>'                                                                    # Cierre del enlace.
+            f'</p>'                                                                      # Cierre del contenedor <p>.
         )
+
 
     # ----------------------------------
     # Cuerpo HTML del email (simple, seguro y responsive básico)
@@ -739,21 +750,21 @@ def send_guest_code_email(to_email: str, guest_name: str, guest_code: str, langu
             f"Hola {guest_name}\n\n"
             f"Tu código de invitación es: {guest_code}\n\n"
             f"{instr}\n"
-            f"{('Login: ' + PUBLIC_LOGIN_URL) if PUBLIC_LOGIN_URL else ''}\n"
+            f"{('Login: ' + cta_url) if PUBLIC_LOGIN_URL else ''}\n"
         )
     elif lang_code == "ro":                                                               # Texto plano RO.
         text_fallback = (
             f"Bună {guest_name}\n\n"
             f"Codul tău de invitație este: {guest_code}\n\n"
             f"{instr}\n"
-            f"{('Autentificare: ' + PUBLIC_LOGIN_URL) if PUBLIC_LOGIN_URL else ''}\n"
+            f"{('Autentificare: ' + cta_url) if PUBLIC_LOGIN_URL else ''}\n"
         )
     else:                                                                                 # Texto plano EN (fallback por defecto).
         text_fallback = (
             f"Hi {guest_name}\n\n"
             f"Your invitation code is: {guest_code}\n\n"
             f"{instr}\n"
-            f"{('Login: ' + PUBLIC_LOGIN_URL) if PUBLIC_LOGIN_URL else ''}\n"
+            f"{('Login: ' + cta_url) if PUBLIC_LOGIN_URL else ''}\n"
         )
 
     # ----------------------------------

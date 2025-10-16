@@ -140,6 +140,27 @@ try:
 except Exception:
     pass                                                                     # Si la versión de Streamlit no soporta query_params, no falla.
 
+goto_page = ""
+try:
+    # Intenta leer el parámetro 'goto' usando la API moderna de Streamlit.
+    query_params = st.query_params
+    goto_raw = query_params.get("goto")
+    # Normaliza el valor: lo convierte en string, quita espacios y lo pasa a minúsculas.
+    goto_page = (goto_raw[0] if isinstance(goto_raw, list) else goto_raw or "").strip().lower()
+except Exception:
+    # Si la API moderna falla (por una versión antigua de Streamlit), usa la experimental como fallback.
+    try:
+        query_params = st.experimental_get_query_params()
+        goto_page = (query_params.get("goto", [""])[0]).strip().lower()
+    except Exception:
+        # Si todo falla, la variable se queda vacía y el bloque no hará nada.
+        goto_page = ""
+
+# Si el parámetro 'goto' tiene el valor 'login'...
+if goto_page == "login":
+    # ...navega inmediatamente a la página de Login y detiene la ejecución de este script.
+    st.switch_page("pages/0_Login.py")
+
 # --- Decisión de destino ------------------------------------------------------
 target_page = FORM_PAGE if st.session_state.get("token") else REQUEST_ACCESS_PAGE  # Con token → Formulario; sin token → Solicitar Acceso.
 
