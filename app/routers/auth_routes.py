@@ -11,6 +11,9 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status             # Importa utilidades de FastAPI (router, dependencias, errores).
 from sqlalchemy.orm import Session                                                # Tipo de sesión de SQLAlchemy para operaciones con BD.
+from sqlalchemy import func                 # para comparar emails en lower()
+from sqlalchemy.exc import IntegrityError   # para capturar carrera UNIQUE
+
 import time                                                                       # Para medir duración de operaciones (logs de búsqueda).
 from loguru import logger                                                         # Logger de Loguru para trazas claras.
 import os                                                                         # Para leer variables de entorno (.env).
@@ -224,15 +227,47 @@ def request_access(                                                             
     )                                                                              # Fin de la llamada al CRUD.
 
     # --- BLOQUE ÚNICO DE PERSISTENCIA: actualiza email/consent ANTES de enviar el correo ---
-    if guest:                                                                      # Si hubo match de invitado...
-        email_in = ((payload.email) or "").strip().lower()                         # Normaliza el email entrante a minúsculas.
-        consent_in = bool(getattr(payload, "consent", False))                      # Normaliza el consentimiento a booleano.
-        stored_email = (guest.email or "").strip().lower()                         # Obtiene el email guardado (o vacío) normalizado.
-        updated = False                                                             # Flag para saber si hay cambios que persistir.
+    # --- BLOQUE ÚNICO DE PERSISTENCIA: actualiza email/consent ANTES de enviar el correo ---
+    if guest:
+        email_in = ((payload.email) or "").strip().lower()          # Normaliza el email entrante
+        consent_in = bool(getattr(payload, "consent", False))       # Convierte consent a booleano
+        stored_email = (guest.email or "").strip().lower()          # Email actual en BD, normalizado
+        updated = False                                             # Flag para commit posterior
 
-        if email_in and email_in != stored_email:                                  # Si hay email nuevo y distinto del guardado...
-            guest.email = email_in                                                 # ...asigna el nuevo email al registro.
-            updated = True                                                         # ...marca que hay cambios.
+        # ── Email único y a prueba de carrera (no romper flujo) ───────────────────────
+        conflict = None   # bandera opcional para UI: se devuelve si otro invitado ya usa este correo
+
+        if email_in and email_in != stored_email:
+            # 1) Verifica si OTRO invitado ya usa este email (case-insensitive)
+            dup = (
+                db.query(models.Guest.id)
+                .filter(
+                    func.lower(models.Guest.email) == email_in,
+                    models.Guest.id != guest.id
+                )
+                .first()
+            )
+
+            if dup:
+                logger.info(f"[EMAIL] En uso por otro guest_id={dup.id}; omito update para id={guest.id}")
+                conflict = {"email_conflict": True, "message_key": "form.email_or_phone_conflict"}
+                # No asignamos guest.email; continuamos el flujo normal
+
+            else:
+                # 2) Intento de asignación protegido frente a carrera (UNIQUE)
+                try:
+                    guest.email = email_in
+                    db.flush()          # Empuja cambios sin cerrar la transacción
+                    updated = True
+                except IntegrityError:
+                    db.rollback()
+                    logger.warning(f"[EMAIL] IntegrityError al actualizar '{email_in}' para id={guest.id}; omito update.")
+                    conflict = {"email_conflict": True, "message_key": "request_access.email_in_use"}
+        # ─────────────────────────────────────────────────────────────────────────────
+
+    if hasattr(guest, "consent") and getattr(guest, "consent", None) != consent_in:
+        guest.consent = consent_in
+        updated = True
 
         if hasattr(guest, "consent") and getattr(guest, "consent", None) != consent_in:  # Si el modelo tiene 'consent' y cambia...
             guest.consent = consent_in                                             # ...actualiza el consentimiento.
@@ -343,7 +378,10 @@ def request_access(                                                             
             logger.exception("RSVP/MAGIC → error enviando magic link: {}", e)       # Registra la excepción; respuesta seguirá neutra.
 
     # --- Respuesta del endpoint (anti-enumeración, retrocompatibilidad) ---
-    return generic                                                                  # Devuelve la misma respuesta tanto si hay match como si no.
+    _conflict = locals().get("conflict")
+    if _conflict:
+        generic.update(_conflict)
+        return generic                                                                  # Devuelve la misma respuesta tanto si hay match como si no.
 
 # =================================================================================
 # 🔓 NUEVO: MAGIC-LOGIN (canjea token mágico por access token)

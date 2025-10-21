@@ -200,7 +200,7 @@ if rsvp_data.get("attending") or rsvp_data.get("confirmed"):                 # S
             allergies = (f"({t('ok.alrg_item', final_lang)}: "               # Texto “(Alergias: …)”
                          f"{c.get('allergies')})" if c.get('allergies')      # Solo si tiene alergias
                          else "")                                            # Si no, vacío
-            st.markdown(f"- {child_icon} {name} {alergies}")                 # Dibuja ítem de lista
+            st.markdown(f"- {child_icon} {name} {allergies}")                 # Dibuja ítem de lista
 else:                                                                        # Si no asiste
     st.info(t("ok.msg_no", final_lang))                                      # Mensaje de no asistencia
 

@@ -160,11 +160,11 @@ with st.form("request_access_form"):                                            
 st.markdown('</div>', unsafe_allow_html=True)                                               # Cierra el contenedor #request.
 
 # -----------------------------------------------------------------------------------------
-# 🚦 Acciones al pulsar Enviar
+# 🚦 Acciones al pulsar Enviar                                                               # Sección de envío.
 # -----------------------------------------------------------------------------------------
 if submit:                                                                                   # Solo ejecuta validaciones y envío si el usuario pulsó Enviar.
     # -------------------------------------------------------------------------------------
-    # ✅ Validaciones locales de campos
+    # ✅ Validaciones locales de campos                                                     # Valida campos con regex y reglas simples.
     # -------------------------------------------------------------------------------------
     name_ok = len((full_name or "").strip()) >= 3                                           # Valida que el nombre tenga al menos 3 caracteres (tras trim).
     phone_ok = bool(re.fullmatch(r"\d{4}", (phone_last4 or "").strip()))                    # Valida que sean exactamente 4 dígitos.
@@ -179,11 +179,12 @@ if submit:                                                                      
         )                                                                                    # Cierra el retorno del mensaje neutro.
 
     has_errors = False                                                                       # Bandera de errores de validación locales.
+
     try:                                                                                     # Intenta mostrar errores con traducciones.
-        if not name_ok:   st.error(t("request.invalid_name", lang));   has_errors = True    # Error de nombre inválido.
-        if not phone_ok:  st.error(t("request.invalid_phone4", lang)); has_errors = True    # Error de dígitos inválidos.
-        if not email_ok:  st.error(t("request.invalid_email", lang));  has_errors = True    # Error de email inválido.
-        if not consent_ok: st.error(t("request.consent_required", lang)); has_errors = True # Error por no aceptar consentimiento.
+        if not name_ok:   st.error(t("request.invalid_name", lang));    has_errors = True    # Error de nombre inválido.
+        if not phone_ok:  st.error(t("request.invalid_phone4", lang));  has_errors = True    # Error de dígitos inválidos.
+        if not email_ok:  st.error(t("request.invalid_email", lang));   has_errors = True    # Error de email inválido.
+        if not consent_ok: st.error(t("request.consent_required", lang)); has_errors = True  # Error por no aceptar consentimiento.
     except Exception:                                                                          # Si fallan traducciones, usa fallback en español.
         if not name_ok:   st.error("⚠️ Nombre inválido"); has_errors = True                 # Fallback de nombre inválido.
         if not phone_ok:  st.error("⚠️ Los últimos 4 dígitos deben ser numéricos (0000–9999)."); has_errors = True  # Fallback de teléfono.
@@ -191,59 +192,101 @@ if submit:                                                                      
         if not consent_ok: st.error("⚠️ Debes aceptar el consentimiento para continuar."); has_errors = True       # Fallback de consentimiento.
 
     # -------------------------------------------------------------------------------------
-    # 🧳 Construcción de payload (solo si no hay errores) + lógica DEMO
+    # 🧳 Construcción de payload (solo si no hay errores) + lógica DEMO                    # Arma el JSON y decide DEMO/real.
     # -------------------------------------------------------------------------------------
-    if not has_errors:                                                                       # Si no hubo errores de validación local…
-        payload = {                                                                          # Construye el JSON que consumirá la API.
-            "full_name": (full_name or "").strip(),                                          # Normaliza nombre.
-            "phone_last4": (phone_last4 or "").strip(),                                      # Normaliza últimos 4 dígitos.
-            "email": (email or "").strip().lower(),                                          # Normaliza email a minúsculas.
-            "preferred_language": lang,                                                      # Incluye idioma preferido.
-            "consent": bool(consent),                                                        # Incluye consentimiento.
-        }                                                                                    # Cierra el payload.
+    if not has_errors:                                                                        # Si no hubo errores de validación local…
+        payload = {                                                                           # Construye el JSON que consumirá la API.
+            "full_name": (full_name or "").strip(),                                           # Normaliza nombre (string).
+            "phone_last4": (phone_last4 or "").strip(),                                       # Normaliza últimos 4 dígitos (string).
+            "email": (email or "").strip().lower(),                                           # Normaliza email a minúsculas (string).
+            "preferred_language": lang,                                                       # Incluye idioma preferido (es/en/ro).
+            "consent": bool(consent),                                                         # Incluye consentimiento (bool).
+        }                                                                                     # Cierra el payload.
 
-        if DEMO_MODE:                                                                        # Si está activo el modo demo…
-            st.info(_msg_neutro())                                                           # Muestra mensaje neutro (no llama API real).
-        else:                                                                                # Si no es demo, llama a la API real…
-            # -----------------------------------------------------------------------------------------
+        if DEMO_MODE:                                                                         # Si está activo el modo demo…
+            st.info(_msg_neutro())                                                            # Muestra mensaje neutro (no llama API real).
+        else:                                                                                 # Si no es demo, llama a la API real…
+
+            # ---------------------------------------------------------------------------------
             # 🌐 Llamada a API y política de mensajes (1 solo aviso según resultado)
-            # -----------------------------------------------------------------------------------------
-            try:                                                                             # Intenta realizar la solicitud HTTP a la API.
-                import requests                                                              # Importa requests localmente.
-                r = requests.post(f"{API_BASE_URL}/api/request-access",                      # Realiza POST a /api/request-access.
-                                   json=payload, timeout=12)                                 # Envía payload y aplica timeout razonable.
+            # ---------------------------------------------------------------------------------
+            try:                                                                              # Intenta realizar la solicitud HTTP a la API.
+                import requests                                                               # Importa requests localmente (evita costo si DEMO_MODE).
+                r = requests.post(                                                            # Realiza POST a /api/request-access.
+                    f"{API_BASE_URL}/api/request-access",                                     # URL del endpoint.
+                    json=payload,                                                             # Envía payload en JSON.
+                    timeout=12                                                                # Aplica timeout razonable (segundos).
+                )                                                                             # Fin de requests.post(...).
 
-                # -----------------------------------------------------------------------------------------
-                # 🧠 Política de mensajes: mostrar 1 solo aviso según resultado (sin JSON crudo)
-                # -----------------------------------------------------------------------------------------
-                if r.status_code == 200:                                                     # Si la API valida y procesa correctamente…
-                    ok_msg = t("request.success_message_ok", lang) or (                      # Toma mensaje de éxito traducido o fallback.
-                        "✅ Datos verificados. Te enviamos un enlace a tu correo. Revisa Bandeja/Spam/Promociones."
-                    )                                                                        # Cierra el fallback de éxito.
-                    st.success(ok_msg)                                                       # Muestra mensaje de éxito.
+                # --- Parseo seguro del cuerpo JSON (si el Content-Type lo indica) -----------
+                data = {}
+                try:
+                    if str(r.headers.get("content-type", "")).startswith("application/json"):
+                        data = r.json() or {}
+                except Exception:
+                    data = {}
 
-                elif r.status_code in (404, 422):                                            # Si los datos no coinciden o hay validación inválida…
-                    fail_msg = t("request.not_found_message", lang) or (                     # Mensaje traducido o fallback genérico (sin revelar campo).
-                        "❌ No pudimos verificar tus datos con la invitación. Revísalos e inténtalo de nuevo."
-                    )                                                                        # Cierra el fallback de error por no coincidencia.
-                    st.error(fail_msg)                                                       # Muestra mensaje de error.
-                else:                                                                        # Cualquier otro estado (p. ej., 5xx, 401 no esperado)…
-                    sys_msg = t("request.system_error_message", lang) or (                   # Mensaje de error del sistema traducido o fallback.
-                        "⚠️ Ocurrió un problema al procesar tu solicitud. Inténtalo de nuevo en unos minutos."
-                    )                                                                        # Cierra el fallback de error del sistema.
-                    st.error(sys_msg)                                                        # Muestra mensaje genérico de sistema.
+                # --- Bandera de conflicto (email/teléfono ya asignado a otro invitado) ------
+                conflict = False
+                if r.status_code == 200 and isinstance(data, dict):
+                    msg_key = data.get("message_key")
+                    err_code = data.get("error_code")
+                    conflict = bool(
+                        data.get("email_conflict")
+                        or data.get("conflict")
+                        or err_code == "EMAIL_OR_PHONE_CONFLICT"
+                        or (isinstance(msg_key, str) and msg_key in {
+                            "form.email_or_phone_conflict",
+                            "request.email_or_phone_conflict",
+                            "access.email_or_phone_conflict",
+                        })
+                    )
 
-                # -----------------------------------------------------------------------------------------
+                # ---------------------------------------------------------------
+                # 🧠 Política de mensajes: mostrar 1 solo aviso (sin JSON crudo)
+                # ---------------------------------------------------------------
+                if conflict:
+                    # Si hay conflicto → SOLO warning (no mostramos el éxito)
+                    msg_key = data.get("message_key") if isinstance(data, dict) else None
+                    st.warning(t(msg_key, lang) if isinstance(msg_key, str) else t("form.email_or_phone_conflict", lang))
+
+                elif r.status_code == 200:
+                    # Éxito sin conflicto → success
+                    ok_msg = t("request.success_message_ok", lang) or "✅ Datos verificados. Te enviamos un enlace a tu correo. Revisa Bandeja/Spam/Promociones."
+                    st.success(ok_msg)
+
+                elif r.status_code in (404, 422):
+                    # Datos no verificados / no coinciden
+                    fail_msg = t("request.not_found_message", lang) or "❌ No pudimos verificar tus datos con la invitación. Revísalos e inténtalo de nuevo."
+                    st.error(fail_msg)
+
+                else:
+                    # Fallback: intenta mostrar 'detail' del backend o error genérico
+                    detail = data.get("detail") if isinstance(data, dict) else None
+                    st.error(detail or t("form.generic_error", lang))
+
+                # ---------------------------------------------------------------------------------
                 # 🛠️ DEBUG opcional: solo el código HTTP (sin JSON crudo) si APP_DEBUG=1
-                # -----------------------------------------------------------------------------------------
-                if APP_DEBUG:                                                                # Si activaste APP_DEBUG en el entorno…
-                    st.caption(f"DEBUG • API {r.status_code}")                               # Muestra el status code como pista (sin exponer JSON).
+                # ---------------------------------------------------------------------------------
+                if APP_DEBUG:
+                    st.caption(f"DEBUG • API {r.status_code}")
 
-            except Exception:                                                                # Cualquier excepción de red/timeout/etc…
-                sys_msg = t("request.system_error_message", lang) or (                       # Mensaje de error del sistema traducido o fallback.
-                    "⚠️ Ocurrió un problema al procesar tu solicitud. Inténtalo de nuevo en unos minutos."
-                )                                                                            # Cierra el fallback de error del sistema.
-                st.error(sys_msg)                                                            # Muestra mensaje de error genérico.
+            # --- Errores de red / tiempo de espera ------------------------------------------
+            except requests.exceptions.RequestException:
+                st.error(t("form.net_err", lang) or t("form.generic_error", lang))
+
+            # --- Cualquier otro error no previsto -------------------------------------------
+            except Exception:
+                st.error(t("form.generic_error", lang))
+
+
+
+            # ---------------------------------------------------------------------------------
+            # 🛠️ DEBUG opcional: solo el código HTTP (sin JSON crudo) si APP_DEBUG=1
+            # ---------------------------------------------------------------------------------
+            if APP_DEBUG:                                                                 # Si activaste APP_DEBUG en el entorno…
+                st.caption(f"DEBUG • API {r.status_code}")                                # Muestra el status code como pista (sin exponer JSON).
+
 
 # -----------------------------------------------------------------------------------------
 # 🔗 Enlace de ayuda para volver a Login
