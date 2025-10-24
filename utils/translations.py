@@ -23,12 +23,11 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "nav.recover": "Recuperar Código",
         "nav.login_prompt": "Iniciar sesión",
         "nav.home": "Inicio",
-
         # --- Login ---
         "login.title": "💍 Confirmar asistencia",
         "login.intro": "¡Qué alegría que estés aquí! Ingresa los datos de tu invitación para continuar.",
         "login.code": "Código de invitación",
-        "login.contact": "Email o Teléfono (Ej: 573101234567)",
+        "login.contact": "Email o Teléfono (Ej: +573101234567)",
         "login.submit": "Acceder",
         "login.errors_empty": "Por favor, completa ambos campos.",
         "login.errors_auth": "Código, email o teléfono no coinciden.",
@@ -36,7 +35,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "login.success": "¡Listo! Te llevamos al formulario…",
         "login.forgot": "¿Olvidaste tu código? Haz clic aquí",
         "login.server_err": "No pudimos validar en este momento. Inténtalo de nuevo en unos segundos.",
-
+        "login.errors_rate_limit": "Has superado el número máximo de intentos. Por favor, espera unos minutos y vuelve a intentarlo.",
         # --- Solicitar Acceso ---
         "request.title": "Solicita tu acceso",
         "request.intro": "Para identificarte, indícanos tu nombre completo, los últimos 4 dígitos de tu teléfono y el email donde quieres recibir tu enlace.",
@@ -56,7 +55,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "request.success_message_ok": "✅ Datos verificados. Te enviamos un enlace a tu correo. Revisa Bandeja/Spam/Promociones.",
         "request.invalid_name": "El nombre debe tener al menos 3 caracteres.",
         "request.consent_required": "Debes aceptar el consentimiento para continuar.",
-
         # --- Formulario RSVP ---
         "form.hi": "Hola",
         "form.subtitle": "Confirma tu asistencia y cuéntanos algunos detalles ✨",
@@ -73,7 +71,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.session_expired": "Tu sesión ha expirado. Por favor, inicia sesión otra vez.",
         "form.load_error": "No pudimos cargar tus datos en este momento.",
         "form.email_or_phone_conflict": "El correo electrónico o el teléfono proporcionado ya está en uso por otro invitado.",
-
         # --- Invitación / horarios ---
         "form.invite_title": "Tu invitación",
         "form.invite_full_access": "Estás invitada/o a la **Ceremonia** y a la **Recepción**. ¡Nos hace muy felices compartir este día contigo! 🕊️",
@@ -81,7 +78,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.time_ceremony": "Ceremonia",
         "form.time_reception": "Recepción",
         "form.accomp_note": "Puedes traer **hasta {max_accomp} acompañante{plural}**.",
-
         # --- Contacto ---
         "form.contact_title": "Datos de contacto",
         "form.contact_caption": "Usaremos estos datos para enviarte la confirmación y recordatorios. 💌",
@@ -90,12 +86,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.contact_required_one": "Por favor, indícanos al menos un correo o un teléfono.",
         "form.contact_invalid_email": "El formato del email no es válido.",
         "form.contact_invalid_phone": "El teléfono debe incluir el código de país. Ej.: +573101234567",
-
         # --- Alergias (titular) ---
         "form.titular_allergies": "Alergias o restricciones (titular)",
         "form.allergies_caption": "Cuéntanos si hay algo que debamos tener en cuenta para cuidar de ti. 💙",
         "form.allergies_or_restrictions": "Alergias o restricciones",
-
         # --- Acompañantes ---
         "form.companions_title": "Acompañantes",
         "form.companions_db_note": "La cantidad de acompañantes permitidos depende de tu invitación.",
@@ -111,11 +105,9 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.adult": "Adulto",
         "form.child": "Niño",
         "form.companion_name_required": "Por favor, indica el nombre de cada acompañante seleccionado.",
-
         # --- Mensaje opcional ---
         "form.notes.expander_label": "📝 ¿Quieres dejarnos un mensaje opcional?",
         "form.notes.placeholder": "Ej.: Llegaremos un poco tarde, preferimos una mesa tranquila…",
-        
         # --- Página de Confirmado ---
         "ok.title": "¡Confirmación recibida!",
         "ok.msg_yes": "¡Gracias por confirmar! Tu respuesta ha sido guardada.",
@@ -133,13 +125,11 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "ok.sending": "Enviando...",
         "ok.resent_ok": "¡Correo de confirmación reenviado!",
         "ok.resent_fail": "No se pudo reenviar el correo.",
-
         # --- Panel de Invitación (usado en Formulario y Confirmado) ---
         "invite.panel_title": "Tu invitación",
         "invite.scope.full": "Estás invitado/a a la **Ceremonia** y a la **Recepción**.",
         "invite.scope.reception": "Estás invitado/a a la **Recepción**.",
         "invite.times.hint": "Ceremonia {ceremony_time} · Recepție {reception_time}",
-        
         # --- Opciones / catálogos UI ---
         "options.allergen.gluten": "Gluten",
         "options.allergen.dairy": "Lácteos",
@@ -147,16 +137,13 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "options.allergen.seafood": "Mariscos",
         "options.allergen.eggs": "Huevos",
         "options.allergen.soy": "Soja",
-
         "options.attendance.yes": "Sí",
         "options.attendance.no": "No",
         "options.attendance.maybe": "Tal vez",
-
         "options.menu.beef": "Carne",
         "options.menu.chicken": "Pollo",
         "options.menu.fish": "Pescado",
         "options.menu.veggie": "Vegetariano",
-        
         # --- Recuperar código ---
         "recover.title": "Recuperar tu código",
         "recover.subtitle": "Ingresa tu email o teléfono usado en la invitación. Si estás en la lista, te enviaremos un mensaje.",
@@ -170,10 +157,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "recover.network": "No hay conexión con el servidor. Detalle: {err}",
         "recover.back": "⬅️ Volver al inicio",
         "recover.go_rsvp": "Ir al formulario RSVP",
-
-
     },
-
     # ==================================================
     # Română — ton cald, clar, cu notă festivă
     # ==================================================
@@ -186,13 +170,11 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "nav.recover": "Recuperează Codul",
         "nav.login_prompt": "Autentificare",
         "nav.home": "Acasă",
-        
-
         # --- Login ---
         "login.title": "💍 Confirmă prezența",
         "login.intro": "Ne bucurăm că ești aici! Introdu datele invitației pentru a continua.",
         "login.code": "Cod invitație",
-        "login.contact": "Email sau telefon (Ex: 40722123456)",
+        "login.contact": "Email sau telefon (Ex: +40722123456)",
         "login.submit": "Continuă",
         "login.errors_empty": "Te rugăm să completezi ambele câmpuri.",
         "login.errors_auth": "Cod, email sau telefon nu corespund.",
@@ -200,7 +182,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "login.success": "Acces permis! Te ducem la formular…",
         "login.forgot": "Ți-ai uitat codul? Apasă aici",
         "login.server_err": "Nu am putut valida acum. Te rugăm să încerci din nou în scurt timp.",
-
+        "login.errors_rate_limit": "Ați depășit numărul maxim de încercări. Vă rugăm să așteptați câteva minute și să încercați din nou.",
         # --- Cere Accesul ---
         "request.title": "Solicită accesul",
         "request.intro": "Pentru identificare, te rugăm să ne spui numele complet, ultimele 4 cifre ale telefonului și emailul unde vrei să primești linkul.",
@@ -220,7 +202,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "request.success_message_ok": "✅ Datele au fost verificate. Ți-am trimis un link pe email. Verifică Inbox și Spam/Promotions.",
         "request.invalid_name": "Numele trebuie să aibă cel puțin 3 caractere.",
         "request.consent_required": "Trebuie să accepți consimțământul pentru a continua.",
-
         # --- Formular RSVP ---
         "form.hi": "Salut",
         "form.subtitle": "Confirmă prezența și spune-ne câteva detalii ✨",
@@ -237,7 +218,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.session_expired": "Sesiunea a expirat. Te rugăm să te autentifici din nou.",
         "form.load_error": "A apărut o eroare la încărcarea datelor tale.",
         "form.email_or_phone_conflict": "Adresa de e-mail sau numărul de telefon furnizat este deja folosit de un alt invitat.",
-
         # --- Invitație / program ---
         "form.invite_title": "Invitația ta",
         "form.invite_full_access": "Ești invitat(ă) la **Ceremonie** și la **Recepție**. Ne bucurăm să împărtășim această zi cu tine! 🕊️",
@@ -245,7 +225,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.time_ceremony": "Ceremonie",
         "form.time_reception": "Recepție",
         "form.accomp_note": "Poți veni cu **până la {max_accomp} însoțitor(i)**.",
-
         # --- Contact ---
         "form.contact_title": "Date de contact",
         "form.contact_caption": "Vom folosi aceste date pentru confirmare și pentru memento-uri. 💌",
@@ -254,12 +233,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.contact_required_one": "Te rugăm să oferi cel puțin un email sau un telefon.",
         "form.contact_invalid_email": "Adresa de email nu pare validă.",
         "form.contact_invalid_phone": "Telefonul trebuie să includă prefixul internațional. Ex.: +40722123456",
-
         # --- Alergii (titular) ---
         "form.titular_allergies": "Alergii sau restricții (titular)",
         "form.allergies_caption": "Spune-ne dacă există ceva important pentru a avea grijă de tine. 💙",
         "form.allergies_or_restrictions": "Alergii sau restricții",
-
         # --- Însoțitori ---
         "form.companions_title": "Însoțitori",
         "form.companions_db_note": "Numărul de însoțitori permiși depinde de invitația ta.",
@@ -275,12 +252,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.adult": "Adult",
         "form.child": "Copil",
         "form.companion_name_required": "Te rugăm să completezi numele fiecărui însoțitor selectat.",
-
         # --- Mesaj opțional ---
         "form.notes.expander_label": "📝 Vrei să ne lași un mesaj opțional?",
         "form.notes.placeholder": "Ex.: Venim mai târziu, preferăm o masă liniștită…",
-    
-    # --- Pagina de Confirmare ---
+        # --- Pagina de Confirmare ---
         "ok.title": "Confirmare primită!",
         "ok.msg_yes": "Îți mulțumim pentru confirmare! Răspunsul tău a fost salvat.",
         "ok.msg_no": "Am înregistrat că nu vei putea participa. Ne va fi dor de tine!",
@@ -297,13 +272,11 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "ok.sending": "Se trimite...",
         "ok.resent_ok": "Emailul de confirmare a fost retrimis!",
         "ok.resent_fail": "Emailul nu a putut fi retrimis.",
-
         # --- Panou Invitație (folosit în Formular și Confirmare) ---
         "invite.panel_title": "Invitația ta",
         "invite.scope.full": "Ești invitat(ă) la **Ceremonie** și la **Recepție**.",
         "invite.scope.reception": "Ești invitat(ă) la **Recepție**.",
         "invite.times.hint": "Ceremonie {ceremony_time} · Recepție {reception_time}",
-        
         # --- Opțiuni / cataloage UI ---
         "options.allergen.gluten": "Gluten",
         "options.allergen.dairy": "Lactate",
@@ -311,16 +284,13 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "options.allergen.seafood": "Fructe de mare",
         "options.allergen.eggs": "Ouă",
         "options.allergen.soy": "Soia",
-
         "options.attendance.yes": "Da",
         "options.attendance.no": "Nu",
         "options.attendance.maybe": "Poate",
-
         "options.menu.beef": "Vită",
         "options.menu.chicken": "Pui",
         "options.menu.fish": "Pește",
         "options.menu.veggie": "Vegetarian",
-
         # --- Recuperare cod ---
         "recover.title": "Recuperează-ți codul",
         "recover.subtitle": "Introdu emailul sau telefonul folosit în invitație. Dacă ești în listă, vei primi un mesaj.",
@@ -334,9 +304,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "recover.network": "Nu se poate contacta serverul. Detalii: {err}",
         "recover.back": "⬅️ Înapoi la început",
         "recover.go_rsvp": "Mergi la formularul RSVP",
-
     },
-
     # ==================================================
     # English — warm, clear, a touch celebratory
     # ==================================================
@@ -349,13 +317,11 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "nav.recover": "Recover Code",
         "nav.login_prompt": "Log in",
         "nav.home": "Home",
-
-
         # --- Login ---
         "login.title": "💍 Confirm attendance",
         "login.intro": "We’re so happy you’re here! Enter your invitation details to continue.",
         "login.code": "Invitation code",
-        "login.contact": "Email or phone (E.g. 447911123456",
+        "login.contact": "Email or phone (E.g. +447911123456",
         "login.submit": "Continue",
         "login.errors_empty": "Please complete both fields.",
         "login.errors_auth": "Code, email or phone don’t match.",
@@ -363,7 +329,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "login.success": "All set! Taking you to the form…",
         "login.forgot": "Forgot your code? Click here",
         "login.server_err": "We couldn’t verify your details right now. Please try again in a moment.",
-
+        "login.errors_rate_limit": "You have exceeded the maximum number of attempts. Please wait a few minutes and try again.",
         # --- Request Access ---
         "request.title": "Request access",
         "request.intro": "To identify you, please share your full name, the last 4 digits of your phone, and the email where you’d like to receive your access link.",
@@ -383,7 +349,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "request.success_message_ok": "✅ Data verified. We’ve sent you a link to your email. Please check Inbox/Spam/Promotions.",
         "request.invalid_name": "The name must have at least 3 characters.",
         "request.consent_required": "Please accept the consent to continue.",
-
         # --- RSVP Form ---
         "form.hi": "Hi",
         "form.subtitle": "Confirm your attendance and share a few details ✨",
@@ -400,7 +365,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.session_expired": "Your session has expired. Please log in again.",
         "form.load_error": "We couldn’t load your data at this time.",
         "form.email_or_phone_conflict": "The email or phone number provided is already in use by another guest.",
-
         # --- Invitation / times ---
         "form.invite_title": "Your invitation",
         "form.invite_full_access": "You’re invited to the **Ceremony** and the **Reception**. We’re thrilled to share this day with you! 🕊️",
@@ -408,7 +372,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.time_ceremony": "Ceremony",
         "form.time_reception": "Reception",
         "form.accomp_note": "You can bring **up to {max_accomp} companion{plural}**.",
-
         # --- Contact ---
         "form.contact_title": "Contact details",
         "form.contact_caption": "We’ll use this information to send your confirmation and reminders. 💌",
@@ -417,12 +380,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.contact_required_one": "Please provide at least an email or a phone number.",
         "form.contact_invalid_email": "The email doesn’t look valid.",
         "form.contact_invalid_phone": "Please include the country code in your phone number E.g., +447911123456",
-
         # --- Allergies (main guest) ---
         "form.titular_allergies": "Allergies or restrictions (main guest)",
         "form.allergies_caption": "Let us know anything we should consider to take good care of you. 💙",
         "form.allergies_or_restrictions": "Allergies or restrictions",
-
         # --- Companions ---
         "form.companions_title": "Companions",
         "form.companions_db_note": "The number of companions allowed depends on your invitation.",
@@ -438,11 +399,9 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "form.adult": "Adult",
         "form.child": "Child",
         "form.companion_name_required": "Please provide the name for each selected companion.",
-
         # --- Optional note ---
         "form.notes.expander_label": "📝 Would you like to leave an optional message?",
         "form.notes.placeholder": "E.g., We might arrive a bit late, we’d love a quiet table…",
-        
         # --- Confirmation Page ---
         "ok.title": "Confirmation Received!",
         "ok.msg_yes": "Thank you for confirming! Your response has been saved.",
@@ -460,13 +419,11 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "ok.sending": "Sending...",
         "ok.resent_ok": "Confirmation email resent!",
         "ok.resent_fail": "Could not resend the email.",
-
         # --- Invitation Panel (used in Form & Confirmed) ---
         "invite.panel_title": "Your Invitation",
         "invite.scope.full": "You are invited to the **Ceremony** and the **Reception**.",
         "invite.scope.reception": "You are invited to the **Reception**.",
         "invite.times.hint": "Ceremony {ceremony_time} · Reception {reception_time}",
-        
         # --- Options / UI catalogs ---
         "options.allergen.gluten": "Gluten",
         "options.allergen.dairy": "Dairy",
@@ -474,16 +431,13 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "options.allergen.seafood": "Seafood",
         "options.allergen.eggs": "Eggs",
         "options.allergen.soy": "Soy",
-
         "options.attendance.yes": "Yes",
         "options.attendance.no": "No",
         "options.attendance.maybe": "Maybe",
-
         "options.menu.beef": "Beef",
         "options.menu.chicken": "Chicken",
         "options.menu.fish": "Fish",
         "options.menu.veggie": "Vegetarian",
-        
         # --- Recover Code ---
         "recover.title": "Recover your code",
         "recover.subtitle": "Enter the email or phone used in your invitation. If you are on the list, we will send you a message.",
@@ -497,14 +451,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "recover.network": "Cannot reach the server. Details: {err}",
         "recover.back": "⬅️ Back to home",
         "recover.go_rsvp": "Go to RSVP form",
-
-
     },
 }
+
 
 def normalize_lang(lang: str | None) -> str:
     code = (lang or "").lower().strip()
     return code if code in VALID_LANGS else DEFAULT_LANG
+
 
 def t(key: str, lang: str | None = None) -> str:
     code = normalize_lang(lang or DEFAULT_LANG)

@@ -12,7 +12,10 @@ import streamlit as st
 from dotenv import load_dotenv
 from utils.lang_selector import render_lang_selector
 from utils.translations import t
-from utils.ui import apply_global_styles, render_side_nav  # Importa estilos globales y la botonera lateral (solo UI)
+from utils.ui import (
+    apply_global_styles,
+    render_side_nav,
+)  # Importa estilos globales y la botonera lateral (solo UI)
 
 
 # --- Utilidades de limpieza UI (sin cambios, respetando la lógica existente) ---
@@ -25,6 +28,7 @@ def _inject_ghost_killer_css() -> None:
         """,
         unsafe_allow_html=True,
     )
+
 
 def _remove_ghost_input_js() -> None:
     st.markdown(
@@ -68,6 +72,7 @@ def _remove_ghost_input_js() -> None:
         unsafe_allow_html=True,
     )
 
+
 def _debug_outline_boxes(enabled: bool = False) -> None:
     if not enabled:
         return
@@ -80,23 +85,26 @@ def _debug_outline_boxes(enabled: bool = False) -> None:
         unsafe_allow_html=True,
     )
 
-# --- Configuración de Página y Entorno ---
-st.set_page_config(                                  # Configura parámetros de la página de Streamlit
-    page_title="Iniciar Sesión • Boda D&C",          # Título de la pestaña del navegador
-    page_icon="💍",                                   # Icono de la pestaña
-    layout="centered",                               # Layout centrado (contenido en el centro)
-    initial_sidebar_state="collapsed",               # Sidebar nativa colapsada (además la ocultamos por CSS)
-)                                                    # Cierra la configuración
 
-load_dotenv()                                        # Carga variables de entorno del archivo .env
-apply_global_styles()                                # ← Aplica estilos globales (fondo, tipografías, oculta sidebar, etc.)
+# --- Configuración de Página y Entorno ---
+st.set_page_config(  # Configura parámetros de la página de Streamlit
+    page_title="Iniciar Sesión • Boda D&C",  # Título de la pestaña del navegador
+    page_icon="💍",  # Icono de la pestaña
+    layout="centered",  # Layout centrado (contenido en el centro)
+    initial_sidebar_state="collapsed",  # Sidebar nativa colapsada (además la ocultamos por CSS)
+)  # Cierra la configuración
+
+load_dotenv()  # Carga variables de entorno del archivo .env
+apply_global_styles()  # ← Aplica estilos globales (fondo, tipografías, oculta sidebar, etc.)
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 RECOVERY_URL = os.getenv("RECOVERY_URL", "")
 
 # --- UI Global: Menú y Selector de Idioma ---
-lang = render_lang_selector()                        # Renderiza el selector de idioma y devuelve el idioma activo (es/en/ro)
-render_side_nav(t, lang, hide=["login"])           # Usa los defaults de ui.py
+lang = (
+    render_lang_selector()
+)  # Renderiza el selector de idioma y devuelve el idioma activo (es/en/ro)
+render_side_nav(t, lang, hide=["login"])  # Usa los defaults de ui.py
 
 
 # --- Parche UI (sin cambios) ---
@@ -177,6 +185,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
 # --- Funciones Helper (autenticación) ---
 def sanitize_contact(value: str) -> tuple[str | None, str | None]:
     v = (value or "").strip()
@@ -184,6 +193,7 @@ def sanitize_contact(value: str) -> tuple[str | None, str | None]:
         return v.lower(), None
     phone = re.sub(r"[^\d+]", "", v)
     return None, (phone or None)
+
 
 def api_login(guest_code: str, contact: str) -> tuple[str | None, str | None]:
     email, phone = sanitize_contact(contact)
@@ -202,9 +212,12 @@ def api_login(guest_code: str, contact: str) -> tuple[str | None, str | None]:
             return (token, None) if token else (None, server_err)
         elif resp.status_code == 401:
             return None, t("login.errors_auth", lang)
+        elif resp.status_code == 429:
+            return None, t("login.errors_rate_limit", lang)
         return None, f"{server_err} (HTTP {resp.status_code})"
     except requests.exceptions.RequestException:
         return None, server_err
+
 
 # --- Interfaz de Usuario (Hero + Tarjeta de Login) ---
 st.markdown(
@@ -217,16 +230,29 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.markdown('<div id="login">', unsafe_allow_html=True)  # Abre un contenedor con id="login" para aislar estilos del formulario.
+st.markdown(
+    '<div id="login">', unsafe_allow_html=True
+)  # Abre un contenedor con id="login" para aislar estilos del formulario.
 
-with st.form("login_form"):                               # Abre el formulario (lógica intacta).
-    guest_code = st.text_input(t("login.code", lang), key="guest_code_input")  # Campo código (sin cambios de lógica).
-    contact = st.text_input(t("login.contact", lang), key="contact_input")     # Campo contacto (sin cambios de lógica).
-    st.markdown('<div style="height: 1rem;"></div>', unsafe_allow_html=True)   # Espaciador visual (igual que antes).
-    login_btn = st.form_submit_button(t("login.submit", lang),                 # Botón de enviar (tipo primario).
-                                      use_container_width=True, type="primary")# Ancho completo y primario.
+with st.form("login_form"):  # Abre el formulario (lógica intacta).
+    guest_code = st.text_input(
+        t("login.code", lang), key="guest_code_input"
+    )  # Campo código (sin cambios de lógica).
+    contact = st.text_input(
+        t("login.contact", lang), key="contact_input"
+    )  # Campo contacto (sin cambios de lógica).
+    st.markdown(
+        '<div style="height: 1rem;"></div>', unsafe_allow_html=True
+    )  # Espaciador visual (igual que antes).
+    login_btn = st.form_submit_button(
+        t("login.submit", lang),  # Botón de enviar (tipo primario).
+        use_container_width=True,
+        type="primary",
+    )  # Ancho completo y primario.
 
-st.markdown('</div>', unsafe_allow_html=True)             # Cierra el contenedor #login para poder “encapsular” el CSS.
+st.markdown(
+    "</div>", unsafe_allow_html=True
+)  # Cierra el contenedor #login para poder “encapsular” el CSS.
 
 # --- Lógica de Acciones ---
 if login_btn:
